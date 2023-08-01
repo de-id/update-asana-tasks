@@ -7,13 +7,20 @@ const githubClient = github.getOctokit(githubToken);
 
 function tagsListToPrNumbers(tagsList: string): number[] {
     console.log(tagsList);
-    console.log(tagsList.split(' '));
 
-    return [];
+    const tags = tagsList.split('\n');
+
+    return tags
+        .map(tag => tag.split('-')[1])
+        .filter(Boolean)
+        .map(prString => parseInt(prString.split('.')[1]))
+        .filter(parsedNumber => !isNaN(parsedNumber));
 }
 
 export async function getPrDescriptions(tagsList: string): Promise<string[]> {
     const prNumbers = tagsListToPrNumbers(tagsList);
+
+    console.log(prNumbers);
 
     const requestPromises = prNumbers.map(pull_number =>
         githubClient.rest.pulls.get({
