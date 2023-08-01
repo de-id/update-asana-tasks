@@ -11,7 +11,7 @@ async function run() {
         console.log(tagNameList);
         console.log(github.context.repo);
 
-        getPrDescriptions([27]);
+        getPrDescriptions([github.context.payload.pull_request?.number || 27]);
     } catch (error: any) {
         core.setFailed(error.message);
     }

@@ -9720,6 +9720,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const github_1 = __nccwpck_require__(4974);
 function run() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const statusToUpdate = core.getInput('to-status');
@@ -9727,7 +9728,7 @@ function run() {
             const tagNameList = core.getInput('tag-name-list');
             console.log(tagNameList);
             console.log(github.context.repo);
-            (0, github_1.getPrDescriptions)([27]);
+            (0, github_1.getPrDescriptions)([((_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number) || 27]);
         }
         catch (error) {
             core.setFailed(error.message);
