@@ -11948,7 +11948,7 @@ function updatePrTaskStatus(prDescription, status, throwOnError) {
             throw error;
         }
         else {
-            console.log(error);
+            console.log(error.message);
         }
     }
 }
@@ -12110,8 +12110,6 @@ function run() {
             else if (tagNameList) {
                 prDescriptions = yield (0, github_1.getPrDescriptions)(tagNameList);
             }
-            console.log(prDescriptions);
-            console.log(statusToUpdate);
             const updatePromises = prDescriptions.map(description => (0, asana_1.updatePrTaskStatus)(description, statusToUpdate, isOnlyTask));
             yield Promise.all(updatePromises);
         }

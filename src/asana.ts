@@ -19,11 +19,11 @@ export function updatePrTaskStatus(prDescription: string, status: QaStatus, thro
     try {
         const taskGid = extractTaskGid(prDescription);
         return updateQaStatus(taskGid, status);
-    } catch (error) {
+    } catch (error: any) {
         if (throwOnError) {
             throw error;
         } else {
-            console.log(error);
+            console.log(error.message);
         }
     }
 }

@@ -24,9 +24,6 @@ async function run() {
             prDescriptions = await getPrDescriptions(tagNameList);
         }
 
-        console.log(prDescriptions);
-        console.log(statusToUpdate);
-
         const updatePromises = prDescriptions.map(description =>
             updatePrTaskStatus(description, statusToUpdate, isOnlyTask)
         );
