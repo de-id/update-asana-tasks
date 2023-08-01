@@ -12024,7 +12024,6 @@ const github = __importStar(__nccwpck_require__(5438));
 const githubToken = core.getInput('github-token');
 const githubClient = github.getOctokit(githubToken);
 function tagsListToPrNumbers(tagsList) {
-    console.log(tagsList);
     const tags = tagsList.split('\n');
     return tags
         .map(tag => tag.split('-')[1])
@@ -12035,7 +12034,6 @@ function tagsListToPrNumbers(tagsList) {
 function getPrDescriptions(tagsList) {
     return __awaiter(this, void 0, void 0, function* () {
         const prNumbers = tagsListToPrNumbers(tagsList);
-        console.log(prNumbers);
         const requestPromises = prNumbers.map(pull_number => githubClient.rest.pulls.get({
             pull_number,
             owner: github.context.repo.owner,
@@ -12112,6 +12110,8 @@ function run() {
             else if (tagNameList) {
                 prDescriptions = yield (0, github_1.getPrDescriptions)(tagNameList);
             }
+            console.log(prDescriptions);
+            console.log(statusToUpdate);
             const updatePromises = prDescriptions.map(description => (0, asana_1.updatePrTaskStatus)(description, statusToUpdate, isOnlyTask));
             yield Promise.all(updatePromises);
         }
