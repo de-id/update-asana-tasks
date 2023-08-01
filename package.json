@@ -1,8 +1,8 @@
 {
-    "name": "update-asana-task",
+    "name": "update-asana-tasks",
     "version": "1.0.0",
     "main": "index.js",
-    "repository": "git@github.com:de-id/update-asana-task.git",
+    "repository": "git@github.com:de-id/update-asana-tasks.git",
     "author": "Elad Ivanir <elad.ivanir@deidentification.co>",
     "license": "MIT",
     "scripts": {

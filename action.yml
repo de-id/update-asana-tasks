@@ -1,12 +1,10 @@
-name: 'Increment Version Tag'
+name: 'Update Asana Tasks'
 description: 'Manage versions via git tags'
 inputs:
-  latest-tag:
-    required: false
-    default: v0.0.0
-  is-feature-branch:
-    required: false
-    default: true
+  pr-description:
+    required: true
+  asana-pat:
+    required: true
 outputs:
   version:
     description: 'new version string'
