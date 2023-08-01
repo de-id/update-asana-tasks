@@ -83,10 +83,6 @@ web_modules/
 .cache
 .parcel-cache
 
-# Next.js build output
-.next
-out
-
 # yarn v2
 .yarn/cache
 .yarn/unplugged
