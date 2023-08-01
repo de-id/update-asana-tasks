@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { getPrDescriptions } from './github';
 
 async function run() {
     try {
@@ -9,6 +10,8 @@ async function run() {
 
         console.log(tagNameList);
         console.log(github.context.repo);
+
+        getPrDescriptions([27]);
     } catch (error: any) {
         core.setFailed(error.message);
     }

@@ -9615,6 +9615,69 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 4974:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getPrDescriptions = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github = __importStar(__nccwpck_require__(5438));
+const githubToken = core.getInput('github-token');
+const githubClient = github.getOctokit(githubToken);
+function tagsListToPrNumbers(tagsList) {
+    return [];
+}
+function getPrDescriptions(prNumbers) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const requestPromises = prNumbers.map(pull_number => githubClient.rest.pulls.get({
+            pull_number,
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+        }));
+        const results = yield Promise.all(requestPromises);
+        console.log(results.map(result => result.data));
+        return [];
+    });
+}
+exports.getPrDescriptions = getPrDescriptions;
+
+
+/***/ }),
+
 /***/ 806:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -9655,6 +9718,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
+const github_1 = __nccwpck_require__(4974);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -9663,6 +9727,7 @@ function run() {
             const tagNameList = core.getInput('tag-name-list');
             console.log(tagNameList);
             console.log(github.context.repo);
+            (0, github_1.getPrDescriptions)([27]);
         }
         catch (error) {
             core.setFailed(error.message);

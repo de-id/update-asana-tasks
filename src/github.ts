@@ -9,14 +9,18 @@ function tagsListToPrNumbers(tagsList: string): number[] {
     return [];
 }
 
-async function getPrDescriptions(prNumbers: number[]): Promise<string[]> {
+export async function getPrDescriptions(prNumbers: number[]): Promise<string[]> {
     const requestPromises = prNumbers.map(pull_number =>
         githubClient.rest.pulls.get({
             pull_number,
-            owner: '',
-            repo: '',
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
         })
     );
+
+    const results = await Promise.all(requestPromises);
+
+    console.log(results.map(result => result.data));
 
     return [];
 }
