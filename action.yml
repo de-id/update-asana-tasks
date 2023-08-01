@@ -1,15 +1,17 @@
 name: 'Update Asana Tasks'
 description: 'Manage versions via git tags'
 inputs:
-  pr-description:
-    required: true
   asana-pat:
     required: true
-outputs:
-  version:
-    description: 'new version string'
-  tags-to-update-wildcard:
-    description: wildcard for querying tags to update
+  github-token:
+    required: true
+  to-status:
+    required: true
+    description: Prod / Staging / Review
+  pr-description:
+    required: false
+  tag-name-list:
+    required: false
 runs:
   using: 'node16'
   main: 'dist/index.js'
