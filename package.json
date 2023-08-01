@@ -1,0 +1,19 @@
+{
+    "name": "update-asana-task",
+    "version": "1.0.0",
+    "main": "index.js",
+    "repository": "git@github.com:de-id/update-asana-task.git",
+    "author": "Elad Ivanir <elad.ivanir@deidentification.co>",
+    "license": "MIT",
+    "scripts": {
+        "build": "rm -rf dist && tsc --outDir temp && ncc build temp/index.js -o dist && rm -rf temp"
+    },
+    "dependencies": {
+        "@actions/core": "^1.10.0",
+        "@actions/github": "^5.1.1"
+    },
+    "devDependencies": {
+        "@vercel/ncc": "^0.36.1",
+        "typescript": "^5.1.6"
+    }
+}

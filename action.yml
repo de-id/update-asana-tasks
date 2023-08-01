@@ -1,0 +1,17 @@
+name: 'Increment Version Tag'
+description: 'Manage versions via git tags'
+inputs:
+  latest-tag:
+    required: false
+    default: v0.0.0
+  is-feature-branch:
+    required: false
+    default: true
+outputs:
+  version:
+    description: 'new version string'
+  tags-to-update-wildcard:
+    description: wildcard for querying tags to update
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
