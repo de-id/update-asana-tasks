@@ -1,17 +1,34 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github';
 import { getPrDescriptions } from './github';
+import { QaStatus, updatePrTaskStatus } from './asana';
 
 async function run() {
     try {
-        const statusToUpdate = core.getInput('to-status');
+        const toStatus = core.getInput('to-status');
         const prDescription = core.getInput('pr-description');
         const tagNameList = core.getInput('tag-name-list');
 
-        console.log(tagNameList);
-        console.log(github.context.repo);
+        let prDescriptions: string[] = [];
+        let isOnlyTask = false;
+        // @ts-ignore-next-line
+        const statusToUpdate = QaStatus[toStatus];
 
-        getPrDescriptions([github.context.payload.pull_request?.number || 27]);
+        if (!statusToUpdate) {
+            throw new Error(`Invalid status! Only available are: ${Object.keys(QaStatus).join(', ')}`);
+        }
+
+        if (prDescription) {
+            isOnlyTask = true;
+            prDescriptions = [prDescription];
+        } else if (tagNameList) {
+            prDescriptions = await getPrDescriptions(tagNameList);
+        }
+
+        const updatePromises = prDescriptions.map(description =>
+            updatePrTaskStatus(description, statusToUpdate, isOnlyTask)
+        );
+
+        await Promise.all(updatePromises);
     } catch (error: any) {
         core.setFailed(error.message);
     }

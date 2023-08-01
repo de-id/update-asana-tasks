@@ -15,7 +15,20 @@ export enum QaStatus {
 
 const asanaPat = core.getInput('asana-pat');
 
-export function extractTaskGid(prDescription: string) {
+export function updatePrTaskStatus(prDescription: string, status: QaStatus, throwOnError?: boolean) {
+    try {
+        const taskGid = extractTaskGid(prDescription);
+        return updateQaStatus(taskGid, status);
+    } catch (error) {
+        if (throwOnError) {
+            throw error;
+        } else {
+            console.log(error);
+        }
+    }
+}
+
+function extractTaskGid(prDescription: string) {
     const asanaUrlRegex = /https:\/\/app\.asana\.com\/0\/.*/;
     const taskUrl = prDescription.match(asanaUrlRegex)?.[0];
 
@@ -27,7 +40,7 @@ export function extractTaskGid(prDescription: string) {
     return taskGid;
 }
 
-export function updateQaStatus(taskGid: string, status: QaStatus) {
+function updateQaStatus(taskGid: string, status: QaStatus) {
     return axios.put(
         asanaBaseUrl + taskGid,
         {

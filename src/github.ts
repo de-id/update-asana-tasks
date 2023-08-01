@@ -6,10 +6,15 @@ const githubToken = core.getInput('github-token');
 const githubClient = github.getOctokit(githubToken);
 
 function tagsListToPrNumbers(tagsList: string): number[] {
+    console.log(tagsList);
+    console.log(tagsList.split(' '));
+
     return [];
 }
 
-export async function getPrDescriptions(prNumbers: number[]): Promise<string[]> {
+export async function getPrDescriptions(tagsList: string): Promise<string[]> {
+    const prNumbers = tagsListToPrNumbers(tagsList);
+
     const requestPromises = prNumbers.map(pull_number =>
         githubClient.rest.pulls.get({
             pull_number,
@@ -20,7 +25,7 @@ export async function getPrDescriptions(prNumbers: number[]): Promise<string[]> 
 
     const results = await Promise.all(requestPromises);
 
-    console.log(results.map(result => result.data));
+    const descriptions = results.map(result => result.data.body).filter(Boolean) as string[];
 
-    return [];
+    return descriptions;
 }
