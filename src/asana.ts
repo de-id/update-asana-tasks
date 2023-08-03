@@ -15,16 +15,12 @@ export enum QaStatus {
 
 const asanaPat = core.getInput('asana-pat');
 
-export function updatePrTaskStatus(prDescription: string, status: QaStatus, throwOnError?: boolean) {
+export function updatePrTaskStatus(prDescription: string, status: QaStatus) {
     try {
         const taskGid = extractTaskGid(prDescription);
         return updateQaStatus(taskGid, status);
     } catch (error: any) {
-        if (throwOnError) {
-            throw error;
-        } else {
-            console.log(error.message);
-        }
+        console.log(error.message);
     }
 }
 

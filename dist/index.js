@@ -11938,18 +11938,13 @@ var QaStatus;
     QaStatus["Prod"] = "1149901879873107";
 })(QaStatus || (exports.QaStatus = QaStatus = {}));
 const asanaPat = core.getInput('asana-pat');
-function updatePrTaskStatus(prDescription, status, throwOnError) {
+function updatePrTaskStatus(prDescription, status) {
     try {
         const taskGid = extractTaskGid(prDescription);
         return updateQaStatus(taskGid, status);
     }
     catch (error) {
-        if (throwOnError) {
-            throw error;
-        }
-        else {
-            console.log(error.message);
-        }
+        console.log(error.message);
     }
 }
 exports.updatePrTaskStatus = updatePrTaskStatus;
@@ -12110,7 +12105,7 @@ function run() {
             else if (tagNameList) {
                 prDescriptions = yield (0, github_1.getPrDescriptions)(tagNameList);
             }
-            const updatePromises = prDescriptions.map(description => (0, asana_1.updatePrTaskStatus)(description, statusToUpdate, isOnlyTask));
+            const updatePromises = prDescriptions.map(description => (0, asana_1.updatePrTaskStatus)(description, statusToUpdate));
             yield Promise.all(updatePromises);
         }
         catch (error) {

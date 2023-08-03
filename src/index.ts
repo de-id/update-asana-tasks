@@ -24,9 +24,7 @@ async function run() {
             prDescriptions = await getPrDescriptions(tagNameList);
         }
 
-        const updatePromises = prDescriptions.map(description =>
-            updatePrTaskStatus(description, statusToUpdate, isOnlyTask)
-        );
+        const updatePromises = prDescriptions.map(description => updatePrTaskStatus(description, statusToUpdate));
 
         await Promise.all(updatePromises);
     } catch (error: any) {
