@@ -15,13 +15,12 @@ export enum QaStatus {
 
 const asanaPat = core.getInput('asana-pat');
 
-export function updatePrTaskStatus(prDescription: string, status: QaStatus) {
-    try {
-        const taskGid = extractTaskGid(prDescription);
-        return updateQaStatus(taskGid, status);
-    } catch (error: any) {
-        console.log(error.message);
-    }
+export async function updatePrTaskStatus(
+    prDescription: string,
+    status: QaStatus
+) {
+    const taskGid = extractTaskGid(prDescription);
+    await updateQaStatus(taskGid, status);
 }
 
 function extractTaskGid(prDescription: string) {
@@ -37,30 +36,19 @@ function extractTaskGid(prDescription: string) {
 }
 
 function updateQaStatus(taskGid: string, status: QaStatus) {
-    try {
-        return axios.put(
-            asanaBaseUrl + taskGid,
-            {
-                data: {
-                    custom_fields: {
-                        [CustomFields.QaStatus]: status,
-                    },
+    return axios.put(
+        asanaBaseUrl + taskGid,
+        {
+            data: {
+                custom_fields: {
+                    [CustomFields.QaStatus]: status,
                 },
             },
-            {
-                headers: {
-                    Authorization: `Bearer ${asanaPat}`,
-                },
-            }
-        );
-    } catch (error: unknown) {
-        if (!(error instanceof AxiosError)) {
-            console.log(error);
-            return;
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${asanaPat}`,
+            },
         }
-        const axiosError = error as AxiosError;
-        console.log(
-            `Request to Asana failed. Code: ${axiosError.code} ${axiosError.message}`
-        );
-    }
+    );
 }

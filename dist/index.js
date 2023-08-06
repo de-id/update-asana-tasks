@@ -12652,9 +12652,21 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updatePrTaskStatus = exports.QaStatus = void 0;
-const axios_1 = __importStar(__nccwpck_require__(8757));
+const axios_1 = __importDefault(__nccwpck_require__(8757));
 const core = __importStar(__nccwpck_require__(2186));
 const asanaBaseUrl = 'https://app.asana.com/api/1.0/tasks/';
 var CustomFields;
@@ -12669,13 +12681,10 @@ var QaStatus;
 })(QaStatus || (exports.QaStatus = QaStatus = {}));
 const asanaPat = core.getInput('asana-pat');
 function updatePrTaskStatus(prDescription, status) {
-    try {
+    return __awaiter(this, void 0, void 0, function* () {
         const taskGid = extractTaskGid(prDescription);
-        return updateQaStatus(taskGid, status);
-    }
-    catch (error) {
-        console.log(error.message);
-    }
+        yield updateQaStatus(taskGid, status);
+    });
 }
 exports.updatePrTaskStatus = updatePrTaskStatus;
 function extractTaskGid(prDescription) {
@@ -12689,27 +12698,17 @@ function extractTaskGid(prDescription) {
     return taskGid;
 }
 function updateQaStatus(taskGid, status) {
-    try {
-        return axios_1.default.put(asanaBaseUrl + taskGid, {
-            data: {
-                custom_fields: {
-                    [CustomFields.QaStatus]: status,
-                },
+    return axios_1.default.put(asanaBaseUrl + taskGid, {
+        data: {
+            custom_fields: {
+                [CustomFields.QaStatus]: status,
             },
-        }, {
-            headers: {
-                Authorization: `Bearer ${asanaPat}`,
-            },
-        });
-    }
-    catch (error) {
-        if (!(error instanceof axios_1.AxiosError)) {
-            console.log(error);
-            return;
-        }
-        const axiosError = error;
-        console.log(`Request to Asana failed. Code: ${axiosError.code} ${axiosError.message}`);
-    }
+        },
+    }, {
+        headers: {
+            Authorization: `Bearer ${asanaPat}`,
+        },
+    });
 }
 
 
@@ -12753,11 +12752,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPrDescriptionsForProd = exports.getPrDescription = void 0;
+exports.getPrDescriptionsForProd = exports.getPrDescription = exports.getPrNumber = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const githubToken = core.getInput('github-token');
 const githubRestClient = github.getOctokit(githubToken).rest;
+function getPrNumber() {
+    var _a;
+    return ((_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number) || 0;
+}
+exports.getPrNumber = getPrNumber;
 function getPrDescription() {
     var _a;
     return ((_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.body) || '';
@@ -12850,24 +12854,28 @@ const core = __importStar(__nccwpck_require__(2186));
 const asana_1 = __nccwpck_require__(1240);
 const env_var_1 = __importDefault(__nccwpck_require__(9459));
 const github_1 = __nccwpck_require__(4974);
-function handleInReview() {
+function handleSinglePr(status) {
     return __awaiter(this, void 0, void 0, function* () {
-        const description = (0, github_1.getPrDescription)();
-        yield (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Review);
-    });
-}
-function handleInStaging() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const description = (0, github_1.getPrDescription)();
-        yield (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Staging);
+        try {
+            const description = (0, github_1.getPrDescription)();
+            yield (0, asana_1.updatePrTaskStatus)(description, status);
+        }
+        catch (err) {
+            console.log(`PR number ${(0, github_1.getPrNumber)()} failed. ${err.message}`);
+        }
     });
 }
 function handleInProd() {
     return __awaiter(this, void 0, void 0, function* () {
         const descriptions = yield (0, github_1.getPrDescriptionsForProd)();
-        yield Promise.all(descriptions.map(description => {
-            (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Prod);
-        }));
+        yield Promise.all(descriptions.map((description) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Prod);
+            }
+            catch (err) {
+                console.log(`PR number ${(0, github_1.getPrNumber)()} failed. ${err.message}`);
+            }
+        })));
     });
 }
 function run() {
@@ -12879,10 +12887,10 @@ function run() {
             const isPrToProd = baseBranch === 'prod';
             if (isPrToStaging) {
                 if (isReview) {
-                    yield handleInReview();
+                    yield handleSinglePr(asana_1.QaStatus.Review);
                 }
                 else {
-                    yield handleInStaging();
+                    yield handleSinglePr(asana_1.QaStatus.Staging);
                 }
             }
             else if (isPrToProd) {

@@ -2,23 +2,32 @@ import * as core from '@actions/core';
 import { QaStatus, updatePrTaskStatus } from './asana';
 import env from 'env-var';
 
-import { getPrDescription, getPrDescriptionsForProd } from './github';
+import {
+    getPrDescription,
+    getPrDescriptionsForProd,
+    getPrNumber,
+} from './github';
 
-async function handleInReview() {
-    const description = getPrDescription();
-    await updatePrTaskStatus(description, QaStatus.Review);
-}
-
-async function handleInStaging() {
-    const description = getPrDescription();
-    await updatePrTaskStatus(description, QaStatus.Staging);
+async function handleSinglePr(status: QaStatus) {
+    try {
+        const description = getPrDescription();
+        await updatePrTaskStatus(description, status);
+    } catch (err: any) {
+        console.log(`PR number ${getPrNumber()} failed. ${err.message}`);
+    }
 }
 
 async function handleInProd() {
     const descriptions = await getPrDescriptionsForProd();
     await Promise.all(
-        descriptions.map(description => {
-            updatePrTaskStatus(description, QaStatus.Prod);
+        descriptions.map(async description => {
+            try {
+                await updatePrTaskStatus(description, QaStatus.Prod);
+            } catch (err: any) {
+                console.log(
+                    `PR number ${getPrNumber()} failed. ${err.message}`
+                );
+            }
         })
     );
 }
@@ -34,9 +43,9 @@ async function run() {
 
         if (isPrToStaging) {
             if (isReview) {
-                await handleInReview();
+                await handleSinglePr(QaStatus.Review);
             } else {
-                await handleInStaging();
+                await handleSinglePr(QaStatus.Staging);
             }
         } else if (isPrToProd) {
             await handleInProd();

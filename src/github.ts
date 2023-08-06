@@ -5,6 +5,10 @@ const githubToken = core.getInput('github-token');
 
 const githubRestClient = github.getOctokit(githubToken).rest;
 
+export function getPrNumber(): number {
+    return github.context.payload.pull_request?.number || 0;
+}
+
 export function getPrDescription(): string {
     return github.context.payload.pull_request?.body || '';
 }
