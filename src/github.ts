@@ -5,7 +5,7 @@ const githubToken = core.getInput('github-token');
 
 const githubRestClient = github.getOctokit(githubToken).rest;
 
-export async function getPrDescription(): Promise<string> {
+export function getPrDescription(): string {
     return github.context.payload.pull_request?.body || '';
 }
 

@@ -1,6 +1,8 @@
 name: 'Update Asana Tasks'
 description: 'Manage versions via git tags'
 inputs:
+  is-review:
+    default: false
   asana-pat:
     required: true
   github-token:
