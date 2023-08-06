@@ -10390,7 +10390,7 @@ exports.getPrDescriptionsForProd = exports.getPrDescription = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const githubToken = core.getInput('github-token');
-const githubClient = github.getOctokit(githubToken);
+const githubRestClient = github.getOctokit(githubToken).rest;
 function getPrDescription() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
@@ -10398,17 +10398,41 @@ function getPrDescription() {
     });
 }
 exports.getPrDescription = getPrDescription;
+function extractPullNumberFromMessage(message) {
+    var _a, _b;
+    let pullNumberMatch;
+    if (message.toLocaleLowerCase().startsWith('merge pull request')) {
+        pullNumberMatch = (_a = message.match(/#\d+/)) === null || _a === void 0 ? void 0 : _a[0].slice(1);
+    }
+    else {
+        pullNumberMatch = (_b = message.match(/\(#\d+\)/)) === null || _b === void 0 ? void 0 : _b[0].slice(2, -1);
+    }
+    if (pullNumberMatch) {
+        return parseInt(pullNumberMatch);
+    }
+}
 function getPrDescriptionsForProd() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const mainPullNumber = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number;
-        const { data: commits } = yield githubClient.rest.pulls.listCommits({
+        const { data: commits } = yield githubRestClient.pulls.listCommits({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
             pull_number: mainPullNumber,
         });
-        console.log(commits.map(({ commit }) => commit));
-        return [];
+        const childPrNumbers = commits
+            .map(({ commit }) => extractPullNumberFromMessage(commit.message))
+            .filter(Boolean);
+        console.log(`Found child PR numbers: ${JSON.stringify(childPrNumbers)}`);
+        const getPrPromises = childPrNumbers.map(pull_number => githubRestClient.pulls.get({
+            pull_number,
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+        }));
+        const getPrResults = yield Promise.all(getPrPromises);
+        return getPrResults
+            .map(result => result.data.body)
+            .filter(Boolean);
     });
 }
 exports.getPrDescriptionsForProd = getPrDescriptionsForProd;
