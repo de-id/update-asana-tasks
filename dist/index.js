@@ -10464,8 +10464,8 @@ const baseBranch = env_var_1.default.get('GITHUB_BASE_REF').asString();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let prDescriptions = [];
-            let statusToUpdate;
+            console.log(baseBranch);
+            yield (0, github_1.getPrDescriptionsForProd)();
             if (baseBranch === 'prod') {
                 yield (0, github_1.getPrDescriptionsForProd)();
             }

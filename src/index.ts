@@ -7,8 +7,9 @@ const baseBranch = env.get('GITHUB_BASE_REF').asString();
 
 async function run() {
     try {
-        let prDescriptions: string[] = [];
-        let statusToUpdate: QaStatus;
+        console.log(baseBranch);
+
+        await getPrDescriptionsForProd();
 
         if (baseBranch === 'prod') {
             await getPrDescriptionsForProd();
