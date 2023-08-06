@@ -11,7 +11,6 @@ export async function getPrDescription(): Promise<string> {
 
 export async function getPrDescriptionsForProd(): Promise<string[]> {
     const mainPullNumber = github.context.payload.pull_request?.number!;
-    console.log({ mainPullNumber });
 
     const commits = await githubClient.rest.pulls.listCommits({
         owner: github.context.repo.owner,
@@ -19,7 +18,7 @@ export async function getPrDescriptionsForProd(): Promise<string[]> {
         pull_number: mainPullNumber,
     });
 
-    console.log(commits);
+    console.log(commits.data.map(commit => commit.parents));
 
     return [];
 }
