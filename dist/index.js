@@ -12652,12 +12652,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updatePrTaskStatus = exports.QaStatus = void 0;
-const axios_1 = __importDefault(__nccwpck_require__(8757));
+const axios_1 = __importStar(__nccwpck_require__(8757));
 const core = __importStar(__nccwpck_require__(2186));
 const asanaBaseUrl = 'https://app.asana.com/api/1.0/tasks/';
 var CustomFields;
@@ -12692,17 +12689,27 @@ function extractTaskGid(prDescription) {
     return taskGid;
 }
 function updateQaStatus(taskGid, status) {
-    return axios_1.default.put(asanaBaseUrl + taskGid, {
-        data: {
-            custom_fields: {
-                [CustomFields.QaStatus]: status,
+    try {
+        return axios_1.default.put(asanaBaseUrl + taskGid, {
+            data: {
+                custom_fields: {
+                    [CustomFields.QaStatus]: status,
+                },
             },
-        },
-    }, {
-        headers: {
-            Authorization: `Bearer ${asanaPat}`,
-        },
-    });
+        }, {
+            headers: {
+                Authorization: `Bearer ${asanaPat}`,
+            },
+        });
+    }
+    catch (error) {
+        if (!(error instanceof axios_1.AxiosError)) {
+            console.log(error);
+            return;
+        }
+        const axiosError = error;
+        console.log(`Request to Asana failed. Code: ${axiosError.code} ${axiosError.message}`);
+    }
 }
 
 

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as core from '@actions/core';
 
 const asanaBaseUrl = 'https://app.asana.com/api/1.0/tasks/';
@@ -37,19 +37,30 @@ function extractTaskGid(prDescription: string) {
 }
 
 function updateQaStatus(taskGid: string, status: QaStatus) {
-    return axios.put(
-        asanaBaseUrl + taskGid,
-        {
-            data: {
-                custom_fields: {
-                    [CustomFields.QaStatus]: status,
+    try {
+        return axios.put(
+            asanaBaseUrl + taskGid,
+            {
+                data: {
+                    custom_fields: {
+                        [CustomFields.QaStatus]: status,
+                    },
                 },
             },
-        },
-        {
-            headers: {
-                Authorization: `Bearer ${asanaPat}`,
-            },
+            {
+                headers: {
+                    Authorization: `Bearer ${asanaPat}`,
+                },
+            }
+        );
+    } catch (error: unknown) {
+        if (!(error instanceof AxiosError)) {
+            console.log(error);
+            return;
         }
-    );
+        const axiosError = error as AxiosError;
+        console.log(
+            `Request to Asana failed. Code: ${axiosError.code} ${axiosError.message}`
+        );
+    }
 }
