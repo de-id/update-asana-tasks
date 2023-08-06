@@ -1,32 +1,18 @@
 import * as core from '@actions/core';
-import { getPrDescriptions } from './github';
-import { QaStatus, updatePrTaskStatus } from './asana';
+import { QaStatus } from './asana';
+import env from 'env-var';
+import { getPrDescriptionsForProd } from './github';
+
+const baseBranch = env.get('GITHUB_BASE_REF').asString();
 
 async function run() {
     try {
-        const toStatus = core.getInput('to-status');
-        const prDescription = core.getInput('pr-description');
-        const tagNameList = core.getInput('tag-name-list');
-
         let prDescriptions: string[] = [];
-        let isOnlyTask = false;
-        // @ts-ignore-next-line
-        const statusToUpdate = QaStatus[toStatus];
+        let statusToUpdate: QaStatus;
 
-        if (!statusToUpdate) {
-            throw new Error(`Invalid status! Only available are: ${Object.keys(QaStatus).join(', ')}`);
+        if (baseBranch === 'prod') {
+            await getPrDescriptionsForProd();
         }
-
-        if (prDescription) {
-            isOnlyTask = true;
-            prDescriptions = [prDescription];
-        } else if (tagNameList) {
-            prDescriptions = await getPrDescriptions(tagNameList);
-        }
-
-        const updatePromises = prDescriptions.map(description => updatePrTaskStatus(description, statusToUpdate));
-
-        await Promise.all(updatePromises);
     } catch (error: any) {
         core.setFailed(error.message);
     }

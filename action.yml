@@ -5,13 +5,6 @@ inputs:
     required: true
   github-token:
     required: true
-  to-status:
-    required: true
-    description: Prod / Staging / Review
-  pr-description:
-    required: false
-  tag-name-list:
-    required: false
 runs:
   using: 'node16'
   main: 'dist/index.js'

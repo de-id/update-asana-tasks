@@ -154,6 +154,11 @@ deprecation@^2.0.0, deprecation@^2.3.1:
   resolved "https://registry.yarnpkg.com/deprecation/-/deprecation-2.3.1.tgz#6368cbdb40abf3373b525ac87e4a260c3a700919"
   integrity sha512-xmHIy4F3scKVwMsQ4WnVaS8bHOx0DmVwRywosKhaILI0ywMDWPtBSku2HNxRvF7jtwDRsoEwYQSfbxj8b7RlJQ==
 
+env-var@^7.3.1:
+  version "7.3.1"
+  resolved "https://registry.yarnpkg.com/env-var/-/env-var-7.3.1.tgz#a1522aa0d962033487a9f336952d02abfba9564b"
+  integrity sha512-Sq9qMnbBApv7SeUOKhw5GZ0VxAwltjFTzXTOvRV9NZEKmMCBZuFCumAvkXwBC5Fo396D7BnOpb5dXud7Vzhliw==
+
 follow-redirects@^1.15.0:
   version "1.15.2"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.2.tgz#b460864144ba63f2681096f274c4e57026da2c13"
