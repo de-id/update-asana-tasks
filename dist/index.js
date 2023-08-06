@@ -10402,12 +10402,12 @@ function getPrDescriptionsForProd() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const mainPullNumber = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number;
-        const commits = yield githubClient.rest.pulls.listCommits({
+        const { data: commits } = yield githubClient.rest.pulls.listCommits({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
             pull_number: mainPullNumber,
         });
-        console.log(commits.data.map(commit => commit.parents));
+        console.log(commits.map(({ commit }) => commit));
         return [];
     });
 }
@@ -10464,8 +10464,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const baseBranch = env_var_1.default.get('GITHUB_BASE_REF').asString();
-            const isProd = core.getInput('is-prod');
-            console.log({ isProd, baseBranch });
+            const isProd = baseBranch === 'prod';
             yield (0, github_1.getPrDescriptionsForProd)();
         }
         catch (error) {
