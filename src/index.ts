@@ -3,17 +3,12 @@ import { QaStatus } from './asana';
 import env from 'env-var';
 import { getPrDescriptionsForProd } from './github';
 
-const baseBranch = env.get('GITHUB_BASE_REF').asString();
-
 async function run() {
     try {
-        console.log(baseBranch);
+        const isProd = core.getInput('is-prod');
+        console.log({ isProd });
 
         await getPrDescriptionsForProd();
-
-        if (baseBranch === 'prod') {
-            await getPrDescriptionsForProd();
-        }
     } catch (error: any) {
         core.setFailed(error.message);
     }
