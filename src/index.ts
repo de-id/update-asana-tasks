@@ -20,12 +20,12 @@ async function handleSinglePr(status: QaStatus) {
 async function handleInProd() {
     const descriptions = await getPrDescriptionsForProd();
     await Promise.all(
-        descriptions.map(async description => {
+        descriptions.map(async ({ description, prNumber }) => {
             try {
                 await updatePrTaskStatus(description, QaStatus.Prod);
             } catch (err: any) {
                 console.log(
-                    `PR number ${getPrNumber()} failed. ${err.message}`
+                    `PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`
                 );
             }
         })

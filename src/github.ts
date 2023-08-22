@@ -27,7 +27,9 @@ function extractPullNumberFromMessage(message: string): number | undefined {
     }
 }
 
-export async function getPrDescriptionsForProd(): Promise<string[]> {
+export async function getPrDescriptionsForProd(): Promise<
+    { prNumber: number; description: string }[]
+> {
     const mainPullNumber = github.context.payload.pull_request?.number!;
 
     const { data: commits } = await githubRestClient.pulls.listCommits({
@@ -42,17 +44,17 @@ export async function getPrDescriptionsForProd(): Promise<string[]> {
 
     console.log(`Found child PR numbers: ${JSON.stringify(childPrNumbers)}`);
 
-    const getPrPromises = childPrNumbers.map(pull_number =>
-        githubRestClient.pulls.get({
-            pull_number,
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-        })
-    );
+    const getPrPromises = childPrNumbers.map(async pull_number => ({
+        description:
+            (
+                await githubRestClient.pulls.get({
+                    pull_number,
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                })
+            ).data.body || '',
+        prNumber: pull_number,
+    }));
 
-    const getPrResults = await Promise.all(getPrPromises);
-
-    return getPrResults
-        .map(result => result.data.body)
-        .filter(Boolean) as string[];
+    return Promise.all(getPrPromises);
 }

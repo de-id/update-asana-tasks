@@ -12793,15 +12793,17 @@ function getPrDescriptionsForProd() {
             .map(({ commit }) => extractPullNumberFromMessage(commit.message))
             .filter(Boolean);
         console.log(`Found child PR numbers: ${JSON.stringify(childPrNumbers)}`);
-        const getPrPromises = childPrNumbers.map(pull_number => githubRestClient.pulls.get({
-            pull_number,
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
+        const getPrPromises = childPrNumbers.map((pull_number) => __awaiter(this, void 0, void 0, function* () {
+            return ({
+                description: (yield githubRestClient.pulls.get({
+                    pull_number,
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                })).data.body || '',
+                prNumber: pull_number,
+            });
         }));
-        const getPrResults = yield Promise.all(getPrPromises);
-        return getPrResults
-            .map(result => result.data.body)
-            .filter(Boolean);
+        return Promise.all(getPrPromises);
     });
 }
 exports.getPrDescriptionsForProd = getPrDescriptionsForProd;
@@ -12868,12 +12870,12 @@ function handleSinglePr(status) {
 function handleInProd() {
     return __awaiter(this, void 0, void 0, function* () {
         const descriptions = yield (0, github_1.getPrDescriptionsForProd)();
-        yield Promise.all(descriptions.map((description) => __awaiter(this, void 0, void 0, function* () {
+        yield Promise.all(descriptions.map(({ description, prNumber }) => __awaiter(this, void 0, void 0, function* () {
             try {
                 yield (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Prod);
             }
             catch (err) {
-                console.log(`PR number ${(0, github_1.getPrNumber)()} failed. ${err.message}`);
+                console.log(`PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`);
             }
         })));
     });
