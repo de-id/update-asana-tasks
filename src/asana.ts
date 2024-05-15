@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import * as core from '@actions/core';
 
 const asanaBaseUrl = 'https://app.asana.com/api/1.0/tasks/';
@@ -31,7 +31,10 @@ function extractTaskGid(prDescription: string) {
         throw new Error('Asana task URL not found in PR description');
     }
 
-    const taskGid = taskUrl.split('/')[5];
+    const [_, __, taskGid] = [...taskUrl.matchAll(/\d+/g)].map(
+        match => match[0]
+    );
+
     return taskGid;
 }
 
