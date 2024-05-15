@@ -12652,15 +12652,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -12680,21 +12671,18 @@ var QaStatus;
     QaStatus["Prod"] = "1149901879873107";
 })(QaStatus || (exports.QaStatus = QaStatus = {}));
 const asanaPat = core.getInput('asana-pat');
-function updatePrTaskStatus(prDescription, status) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const taskGid = extractTaskGid(prDescription);
-        yield updateQaStatus(taskGid, status);
-    });
+async function updatePrTaskStatus(prDescription, status) {
+    const taskGid = extractTaskGid(prDescription);
+    await updateQaStatus(taskGid, status);
 }
 exports.updatePrTaskStatus = updatePrTaskStatus;
 function extractTaskGid(prDescription) {
-    var _a;
     const asanaUrlRegex = /https:\/\/app\.asana\.com\/0\/.*/;
-    const taskUrl = (_a = prDescription.match(asanaUrlRegex)) === null || _a === void 0 ? void 0 : _a[0];
+    const taskUrl = prDescription.match(asanaUrlRegex)?.[0];
     if (!taskUrl) {
         throw new Error('Asana task URL not found in PR description');
     }
-    const taskGid = taskUrl.split('/')[5];
+    const [_, __, taskGid] = [...taskUrl.matchAll(/\d+/g)].map(match => match[0]);
     return taskGid;
 }
 function updateQaStatus(taskGid, status) {
@@ -12742,15 +12730,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getPrDescriptionsForProd = exports.getPrDescription = exports.getPrNumber = void 0;
 const core = __importStar(__nccwpck_require__(2186));
@@ -12758,53 +12737,45 @@ const github = __importStar(__nccwpck_require__(5438));
 const githubToken = core.getInput('github-token');
 const githubRestClient = github.getOctokit(githubToken).rest;
 function getPrNumber() {
-    var _a;
-    return ((_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number) || 0;
+    return github.context.payload.pull_request?.number || 0;
 }
 exports.getPrNumber = getPrNumber;
 function getPrDescription() {
-    var _a;
-    return ((_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.body) || '';
+    return github.context.payload.pull_request?.body || '';
 }
 exports.getPrDescription = getPrDescription;
 function extractPullNumberFromMessage(message) {
-    var _a, _b;
     let pullNumberMatch;
     if (message.toLocaleLowerCase().startsWith('merge pull request')) {
-        pullNumberMatch = (_a = message.match(/#\d+/)) === null || _a === void 0 ? void 0 : _a[0].slice(1);
+        pullNumberMatch = message.match(/#\d+/)?.[0].slice(1);
     }
     else {
-        pullNumberMatch = (_b = message.match(/\(#\d+\)/)) === null || _b === void 0 ? void 0 : _b[0].slice(2, -1);
+        pullNumberMatch = message.match(/\(#\d+\)/)?.[0].slice(2, -1);
     }
     if (pullNumberMatch) {
         return parseInt(pullNumberMatch);
     }
 }
-function getPrDescriptionsForProd() {
-    var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        const mainPullNumber = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number;
-        const { data: commits } = yield githubRestClient.pulls.listCommits({
+async function getPrDescriptionsForProd() {
+    const mainPullNumber = github.context.payload.pull_request?.number;
+    const { data: commits } = await githubRestClient.pulls.listCommits({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: mainPullNumber,
+    });
+    const childPrNumbers = commits
+        .map(({ commit }) => extractPullNumberFromMessage(commit.message))
+        .filter(Boolean);
+    console.log(`Found child PR numbers: ${JSON.stringify(childPrNumbers)}`);
+    const getPrPromises = childPrNumbers.map(async (pull_number) => ({
+        description: (await githubRestClient.pulls.get({
+            pull_number,
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
-            pull_number: mainPullNumber,
-        });
-        const childPrNumbers = commits
-            .map(({ commit }) => extractPullNumberFromMessage(commit.message))
-            .filter(Boolean);
-        console.log(`Found child PR numbers: ${JSON.stringify(childPrNumbers)}`);
-        const getPrPromises = childPrNumbers.map((pull_number) => __awaiter(this, void 0, void 0, function* () {
-            return ({
-                description: (yield githubRestClient.pulls.get({
-                    pull_number,
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                })).data.body || '',
-                prNumber: pull_number,
-            });
-        }));
-        return Promise.all(getPrPromises);
-    });
+        })).data.body || '',
+        prNumber: pull_number,
+    }));
+    return Promise.all(getPrPromises);
 }
 exports.getPrDescriptionsForProd = getPrDescriptionsForProd;
 
@@ -12839,15 +12810,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -12856,53 +12818,47 @@ const core = __importStar(__nccwpck_require__(2186));
 const asana_1 = __nccwpck_require__(1240);
 const env_var_1 = __importDefault(__nccwpck_require__(9459));
 const github_1 = __nccwpck_require__(4974);
-function handleSinglePr(status) {
-    return __awaiter(this, void 0, void 0, function* () {
+async function handleSinglePr(status) {
+    try {
+        const description = (0, github_1.getPrDescription)();
+        await (0, asana_1.updatePrTaskStatus)(description, status);
+    }
+    catch (err) {
+        console.log(`PR number ${(0, github_1.getPrNumber)()} failed. ${err.message}`);
+    }
+}
+async function handleInProd() {
+    const descriptions = await (0, github_1.getPrDescriptionsForProd)();
+    await Promise.all(descriptions.map(async ({ description, prNumber }) => {
         try {
-            const description = (0, github_1.getPrDescription)();
-            yield (0, asana_1.updatePrTaskStatus)(description, status);
+            await (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Prod);
         }
         catch (err) {
-            console.log(`PR number ${(0, github_1.getPrNumber)()} failed. ${err.message}`);
+            console.log(`PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`);
         }
-    });
+    }));
 }
-function handleInProd() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const descriptions = yield (0, github_1.getPrDescriptionsForProd)();
-        yield Promise.all(descriptions.map(({ description, prNumber }) => __awaiter(this, void 0, void 0, function* () {
-            try {
-                yield (0, asana_1.updatePrTaskStatus)(description, asana_1.QaStatus.Prod);
+async function run() {
+    try {
+        const isReview = core.getInput('is-review') !== 'false';
+        const baseBranch = env_var_1.default.get('GITHUB_BASE_REF').required().asString();
+        const isPrToStaging = ['master', 'main', 'staging'].includes(baseBranch);
+        const isPrToProd = baseBranch === 'prod';
+        if (isPrToStaging) {
+            if (isReview) {
+                await handleSinglePr(asana_1.QaStatus.Review);
             }
-            catch (err) {
-                console.log(`PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`);
-            }
-        })));
-    });
-}
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const isReview = core.getInput('is-review') !== 'false';
-            const baseBranch = env_var_1.default.get('GITHUB_BASE_REF').required().asString();
-            const isPrToStaging = ['master', 'main', 'staging'].includes(baseBranch);
-            const isPrToProd = baseBranch === 'prod';
-            if (isPrToStaging) {
-                if (isReview) {
-                    yield handleSinglePr(asana_1.QaStatus.Review);
-                }
-                else {
-                    yield handleSinglePr(asana_1.QaStatus.Staging);
-                }
-            }
-            else if (isPrToProd) {
-                yield handleInProd();
+            else {
+                await handleSinglePr(asana_1.QaStatus.Staging);
             }
         }
-        catch (error) {
-            core.setFailed(error.message);
+        else if (isPrToProd) {
+            await handleInProd();
         }
-    });
+    }
+    catch (error) {
+        core.setFailed(error.message);
+    }
 }
 run();
 
