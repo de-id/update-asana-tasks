@@ -15,27 +15,31 @@ export enum QaStatus {
 
 const asanaPat = core.getInput('asana-pat');
 
-export async function updatePrTaskStatus(
+export async function updatePrTaskStatuses(
     prDescription: string,
     status: QaStatus
 ) {
-    const taskGid = extractTaskGid(prDescription);
-    await updateQaStatus(taskGid, status);
+    const taskIds = extractTaskIds(prDescription);
+    await Promise.all(taskIds.map(taskGid => updateQaStatus(taskGid, status)));
 }
 
-function extractTaskGid(prDescription: string) {
-    const asanaUrlRegex = /https:\/\/app\.asana\.com\/0\/.*/;
-    const taskUrl = prDescription.match(asanaUrlRegex)?.[0];
-
-    if (!taskUrl) {
-        throw new Error('Asana task URL not found in PR description');
-    }
-
-    const [_, __, taskGid] = [...taskUrl.matchAll(/\d+/g)].map(
+function extractTaskIds(prDescription: string) {
+    const asanaUrlRegex = /https:\/\/app\.asana\.com\/0\/.*/g;
+    const taskUrls = [...prDescription.matchAll(asanaUrlRegex)].map(
         match => match[0]
     );
 
-    return taskGid;
+    if (!taskUrls) {
+        throw new Error('Asana task URL not found in PR description');
+    }
+
+    return taskUrls.map(taskUrl => {
+        const [_, __, taskGid] = [...taskUrl.matchAll(/\d+/g)].map(
+            match => match[0]
+        );
+
+        return taskGid;
+    });
 }
 
 function updateQaStatus(taskGid: string, status: QaStatus) {
