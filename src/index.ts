@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { QaStatus, updatePrTaskStatus } from './asana';
+import { QaStatus, updatePrTaskStatuses } from './asana';
 import env from 'env-var';
 
 import {
@@ -11,7 +11,7 @@ import {
 async function handleSinglePr(status: QaStatus) {
     try {
         const description = getPrDescription();
-        await updatePrTaskStatus(description, status);
+        await updatePrTaskStatuses(description, status);
     } catch (err: any) {
         console.log(`PR number ${getPrNumber()} failed. ${err.message}`);
     }
@@ -22,7 +22,7 @@ async function handleInProd() {
     await Promise.all(
         descriptions.map(async ({ description, prNumber }) => {
             try {
-                await updatePrTaskStatus(description, QaStatus.Prod);
+                await updatePrTaskStatuses(description, QaStatus.Prod);
             } catch (err: any) {
                 console.log(
                     `PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`
