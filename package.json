@@ -1,6 +1,6 @@
 {
     "name": "update-asana-tasks",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "main": "index.js",
     "repository": "git@github.com:de-id/update-asana-tasks.git",
     "author": "Elad Ivanir <elad.ivanir@deidentification.co>",
@@ -11,6 +11,7 @@
     "dependencies": {
         "@actions/core": "^1.10.0",
         "@actions/github": "^5.1.1",
+        "@slack/web-api": "^7.7.0",
         "axios": "^1.4.0",
         "env-var": "^7.3.1"
     },
