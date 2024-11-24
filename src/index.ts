@@ -7,6 +7,7 @@ import {
     getPrDescriptionsForProd,
     getPrNumber,
 } from './github';
+import { handleReleaseNotes } from './release-notes';
 
 async function handleSinglePr(status: QaStatus) {
     try {
@@ -17,7 +18,7 @@ async function handleSinglePr(status: QaStatus) {
     }
 }
 
-async function handleInProd() {
+async function handleInProd(slackBotToken: string, slackBotChannelId: string) {
     const descriptions = await getPrDescriptionsForProd();
     await Promise.all(
         descriptions.map(async ({ description, prNumber }) => {
@@ -30,6 +31,8 @@ async function handleInProd() {
             }
         })
     );
+
+    await handleReleaseNotes(descriptions, slackBotToken, slackBotChannelId);
 }
 
 async function run() {
@@ -40,6 +43,8 @@ async function run() {
             baseBranch
         );
         const isPrToProd = baseBranch === 'prod';
+        const slackToken: string = core.getInput('slack-bot-token');
+        const slackBotChannelId: string = core.getInput('slack-bot-channel-id');
 
         if (isPrToStaging) {
             if (isReview) {
@@ -48,7 +53,7 @@ async function run() {
                 await handleSinglePr(QaStatus.Staging);
             }
         } else if (isPrToProd) {
-            await handleInProd();
+            await handleInProd(slackToken, slackBotChannelId);
         }
     } catch (error: any) {
         core.setFailed(error.message);

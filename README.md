@@ -7,7 +7,7 @@ A GitHub action for handling our internal GitHub <> Asana flow.
 ```
 steps:
     - name: Update Asana tasks
-    uses: de-id/update-asana-tasks@v1.3
+    uses: de-id/update-asana-tasks@v1.4
     with:
         asana-pat: ${{ secrets.ASANA_PAT }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -21,12 +21,18 @@ asana-pat:
 required: true
 github-token:
 required: true
+slack-bot-token:
+required: false
+slack-bot-channel-id:
+required: false
 
-| Name           | Description                                                    | Is Required | Default |
-| -------------- | -------------------------------------------------------------- | ----------- | ------- |
-| `is-review`    | Is the action used for new PR (Task will move to "In Review")  | No          | false   |
-| `asana-pat`    | Asana PAT (Stored in our secrets, can be generated from Asana) | Yes         | -       |
-| `github-token` | -> secrets.GITHUB_TOKEN                                        | Yes         | -       |
+| Name                   | Description                                                    | Is Required | Default |
+| ---------------------- | -------------------------------------------------------------- | ----------- | ------- |
+| `is-review`            | Is the action used for new PR (Task will move to "In Review")  | No          | false   |
+| `asana-pat`            | Asana PAT (Stored in our secrets, can be generated from Asana) | Yes         | -       |
+| `github-token`         | -> secrets.GITHUB_TOKEN                                        | Yes         | -       |
+| `slack-bot-token`      | token to send slack messages                                   | Yes         | -       |
+| `slack-bot-channel-id` | channel for slack messages                                     | Yes         | -       |
 
 ### Outputs
 
