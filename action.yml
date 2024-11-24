@@ -7,8 +7,6 @@ inputs:
     required: true
   github-token:
     required: true
-  github-token:
-    required: true
   slack-bot-token:
     required: false
   slack-bot-channel-id:
