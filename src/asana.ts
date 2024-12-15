@@ -27,11 +27,8 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
     taskIds: string[];
     taskUrls: string[];
 } {
-    // Updated regex to match valid Asana URLs and exclude unwanted characters
-    const asanaUrlRegex =
-        /https:\/\/app\.asana\.com\/0\/\d+\/\d+(?:\/f)?(?!\))/g;
+    const asanaUrlRegex = /https:\/\/app\.asana\.com\/0\/\d+\/\d+/g;
 
-    // Extract and clean up task URLs
     const taskUrls = [...prDescription.matchAll(asanaUrlRegex)].map(
         match => match[0]
     );
@@ -41,15 +38,9 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
         return { taskIds: [], taskUrls: [] };
     }
 
-    // Extract task IDs from the valid URLs
     const taskIds = taskUrls.map(taskUrl => {
-        // Match the last numeric segment in the URL, which corresponds to the task GID
-        const taskGidMatch = taskUrl.match(/\/(\d+)(?:\/f)?$/);
-        if (!taskGidMatch || !taskGidMatch[1]) {
-            console.log(`Could not extract task GID from URL: ${taskUrl}`);
-            return 'not-found';
-        }
-        return taskGidMatch[1];
+        const taskGidMatch = taskUrl.match(/\/(\d+)$/);
+        return taskGidMatch ? taskGidMatch[1] : 'not-found';
     });
 
     return { taskIds, taskUrls };
