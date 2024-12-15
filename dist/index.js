@@ -18672,6 +18672,7 @@ async function handleSinglePr(status) {
 }
 async function handleInProd(slackBotToken, slackBotChannelId) {
     const descriptions = await (0, github_1.getPrDescriptionsForProd)();
+    console.log('descriptions', descriptions);
     await Promise.all(descriptions.map(async ({ description, prNumber }) => {
         try {
             await (0, asana_1.updatePrTaskStatuses)(description, asana_1.QaStatus.Prod);
