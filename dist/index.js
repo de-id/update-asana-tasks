@@ -18494,7 +18494,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getTaskIdsAndUrlsFromPr = exports.updatePrTaskStatuses = exports.QaStatus = void 0;
+exports.getTaskDetailsFromPr = exports.getTaskIdsAndUrlsFromPr = exports.updatePrTaskStatuses = exports.QaStatus = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const core = __importStar(__nccwpck_require__(2186));
 const asanaBaseUrl = 'https://app.asana.com/api/1.0/tasks/';
@@ -18536,6 +18536,32 @@ function getTaskIdsAndUrlsFromPr(prDescription) {
     return { taskIds, taskUrls };
 }
 exports.getTaskIdsAndUrlsFromPr = getTaskIdsAndUrlsFromPr;
+async function getTaskDetailsFromPr(prDescription) {
+    // Extract task IDs and URLs using the existing function
+    const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
+    if (!taskIds.length) {
+        console.log('No valid Asana task IDs found in PR description');
+        return { taskIds: [], taskUrls: [], taskTitles: [] };
+    }
+    // Fetch task titles for each task ID
+    const asanaPat = core.getInput('asana-pat');
+    const taskTitles = await Promise.all(taskIds.map(async (taskGid) => {
+        try {
+            const response = await axios_1.default.get(`${asanaBaseUrl}${taskGid}`, {
+                headers: {
+                    Authorization: `Bearer ${asanaPat}`,
+                },
+            });
+            return response.data?.data?.name || 'Unknown Task Title';
+        }
+        catch (error) {
+            console.error(`Failed to fetch title for task ID ${taskGid}:`, error?.message);
+            return 'Unknown Task Title';
+        }
+    }));
+    return { taskIds, taskUrls, taskTitles };
+}
+exports.getTaskDetailsFromPr = getTaskDetailsFromPr;
 function updateQaStatus(taskGid, status) {
     return axios_1.default.put(asanaBaseUrl + taskGid, {
         data: {
@@ -18732,7 +18758,7 @@ const asana_1 = __nccwpck_require__(1240);
 const slack_1 = __nccwpck_require__(9342);
 const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId) => {
     try {
-        const releaseNotes = getReleaseNotesFromDescriptions(descriptionAndPrNumberArray);
+        const releaseNotes = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray);
         if (slackBotToken && slackBotChannelId) {
             await (0, slack_1.sendSlackMessage)(releaseNotes, slackBotToken, slackBotChannelId);
         }
@@ -18742,22 +18768,34 @@ const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, sl
     }
 };
 exports.handleReleaseNotes = handleReleaseNotes;
-const getReleaseNotesFromDescriptions = (descriptionAndPrNumberArray) => {
-    let taskUrlsFromAllDescriptions = [];
-    descriptionAndPrNumberArray.map(async ({ description }) => {
+const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray) => {
+    let taskDetailsFromAllDescriptions = [];
+    await Promise.all(descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
-            const { taskUrls: taskUrlsFromCurrentDescription } = (0, asana_1.getTaskIdsAndUrlsFromPr)(description);
-            console.log('taskUrlsFromCurrentDescription', taskUrlsFromCurrentDescription, (0, asana_1.getTaskIdsAndUrlsFromPr)(description));
-            taskUrlsFromAllDescriptions = [
-                ...taskUrlsFromAllDescriptions,
-                ...taskUrlsFromCurrentDescription,
+            const { taskUrls, taskTitles } = await (0, asana_1.getTaskDetailsFromPr)(description);
+            // Map titles and URLs into a structured format
+            const taskDetails = taskUrls.map((url, index) => ({
+                title: taskTitles[index],
+                url,
+            }));
+            taskDetailsFromAllDescriptions = [
+                ...taskDetailsFromAllDescriptions,
+                ...taskDetails,
             ];
         }
-        catch (e) { }
-    });
-    console.log('taskUrlsFromAllDescriptions', taskUrlsFromAllDescriptions, descriptionAndPrNumberArray);
-    return `New release is being cooked 👩‍🍳, those are the asana tickets: 
-    ${taskUrlsFromAllDescriptions.join(', ')}`;
+        catch (error) {
+            console.error('Failed to process description:', description, error);
+        }
+    }));
+    if (taskDetailsFromAllDescriptions.length === 0) {
+        return 'No Asana tickets were found in the provided descriptions.';
+    }
+    // Format task details for Slack (clickable titles with URLs)
+    const formattedTaskDetails = taskDetailsFromAllDescriptions
+        .map(({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
+    )
+        .join('\n');
+    return `New release is being cooked 👩‍🍳, those are the Asana tickets:\n${formattedTaskDetails}`;
 };
 
 

@@ -55,6 +55,43 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
     return { taskIds, taskUrls };
 }
 
+export async function getTaskDetailsFromPr(prDescription: string): Promise<{
+    taskIds: string[];
+    taskUrls: string[];
+    taskTitles: string[];
+}> {
+    // Extract task IDs and URLs using the existing function
+    const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
+
+    if (!taskIds.length) {
+        console.log('No valid Asana task IDs found in PR description');
+        return { taskIds: [], taskUrls: [], taskTitles: [] };
+    }
+
+    // Fetch task titles for each task ID
+    const asanaPat = core.getInput('asana-pat');
+    const taskTitles: string[] = await Promise.all(
+        taskIds.map(async taskGid => {
+            try {
+                const response = await axios.get(`${asanaBaseUrl}${taskGid}`, {
+                    headers: {
+                        Authorization: `Bearer ${asanaPat}`,
+                    },
+                });
+                return response.data?.data?.name || 'Unknown Task Title';
+            } catch (error: any) {
+                console.error(
+                    `Failed to fetch title for task ID ${taskGid}:`,
+                    error?.message
+                );
+                return 'Unknown Task Title';
+            }
+        })
+    );
+
+    return { taskIds, taskUrls, taskTitles };
+}
+
 function updateQaStatus(taskGid: string, status: QaStatus) {
     return axios.put(
         asanaBaseUrl + taskGid,

@@ -1,4 +1,4 @@
-import { getTaskIdsAndUrlsFromPr } from './asana';
+import { getTaskDetailsFromPr } from './asana';
 import { sendSlackMessage } from './slack';
 
 export const handleReleaseNotes = async (
@@ -7,7 +7,7 @@ export const handleReleaseNotes = async (
     slackBotChannelId: string
 ): Promise<void> => {
     try {
-        const releaseNotes: string = getReleaseNotesFromDescriptions(
+        const releaseNotes: string = await getReleaseNotesFromDescriptions(
             descriptionAndPrNumberArray
         );
         if (slackBotToken && slackBotChannelId) {
@@ -22,30 +22,50 @@ export const handleReleaseNotes = async (
     }
 };
 
-const getReleaseNotesFromDescriptions = (
+const getReleaseNotesFromDescriptions = async (
     descriptionAndPrNumberArray: any[]
-): string => {
-    let taskUrlsFromAllDescriptions: string[] = [];
-    descriptionAndPrNumberArray.map(async ({ description }) => {
-        try {
-            const { taskUrls: taskUrlsFromCurrentDescription } =
-                getTaskIdsAndUrlsFromPr(description);
-            console.log(
-                'taskUrlsFromCurrentDescription',
-                taskUrlsFromCurrentDescription,
-                getTaskIdsAndUrlsFromPr(description)
-            );
-            taskUrlsFromAllDescriptions = [
-                ...taskUrlsFromAllDescriptions,
-                ...taskUrlsFromCurrentDescription,
-            ];
-        } catch (e) {}
-    });
-    console.log(
-        'taskUrlsFromAllDescriptions',
-        taskUrlsFromAllDescriptions,
-        descriptionAndPrNumberArray
+): Promise<string> => {
+    let taskDetailsFromAllDescriptions: { title: string; url: string }[] = [];
+
+    await Promise.all(
+        descriptionAndPrNumberArray.map(async ({ description }) => {
+            try {
+                const { taskUrls, taskTitles } = await getTaskDetailsFromPr(
+                    description
+                );
+
+                // Map titles and URLs into a structured format
+                const taskDetails = taskUrls.map(
+                    (url: string, index: number) => ({
+                        title: taskTitles[index],
+                        url,
+                    })
+                );
+
+                taskDetailsFromAllDescriptions = [
+                    ...taskDetailsFromAllDescriptions,
+                    ...taskDetails,
+                ];
+            } catch (error) {
+                console.error(
+                    'Failed to process description:',
+                    description,
+                    error
+                );
+            }
+        })
     );
-    return `New release is being cooked 👩‍🍳, those are the asana tickets: 
-    ${taskUrlsFromAllDescriptions.join(', ')}`;
+
+    if (taskDetailsFromAllDescriptions.length === 0) {
+        return 'No Asana tickets were found in the provided descriptions.';
+    }
+
+    // Format task details for Slack (clickable titles with URLs)
+    const formattedTaskDetails = taskDetailsFromAllDescriptions
+        .map(
+            ({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
+        )
+        .join('\n');
+
+    return `New release is being cooked 👩‍🍳, those are the Asana tickets:\n${formattedTaskDetails}`;
 };
