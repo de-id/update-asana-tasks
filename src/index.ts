@@ -20,6 +20,7 @@ async function handleSinglePr(status: QaStatus) {
 
 async function handleInProd(slackBotToken: string, slackBotChannelId: string) {
     const descriptions = await getPrDescriptionsForProd();
+    console.log('descriptions', descriptions);
     await Promise.all(
         descriptions.map(async ({ description, prNumber }) => {
             try {
