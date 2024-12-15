@@ -18787,7 +18787,7 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray) => {
         .map(({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
     )
         .join('\n');
-    return `New release is being cooked 👩‍🍳\nthose are the Asana tickets included:\n${formattedTaskDetails}\n@qa-team`;
+    return `New release is being cooked 👩‍🍳\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
 };
 
 

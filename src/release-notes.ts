@@ -67,5 +67,5 @@ const getReleaseNotesFromDescriptions = async (
         )
         .join('\n');
 
-    return `New release is being cooked 👩‍🍳\nthose are the Asana tickets included:\n${formattedTaskDetails}\n@qa-team`;
+    return `New release is being cooked 👩‍🍳\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
 };
