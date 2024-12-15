@@ -18737,7 +18737,8 @@ const getReleaseNotesFromDescriptions = (descriptionAndPrNumberArray) => {
     let taskUrlsFromAllDescriptions = [];
     descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
-            const { taskUrls: taskUrlsFromCurrentDescription } = await (0, asana_1.getTaskIdsAndUrlsFromPr)(description);
+            const { taskUrls: taskUrlsFromCurrentDescription } = (0, asana_1.getTaskIdsAndUrlsFromPr)(description);
+            console.log('taskUrlsFromCurrentDescription', taskUrlsFromCurrentDescription, (0, asana_1.getTaskIdsAndUrlsFromPr)(description));
             taskUrlsFromAllDescriptions = [
                 ...taskUrlsFromAllDescriptions,
                 ...taskUrlsFromCurrentDescription,
@@ -18745,6 +18746,7 @@ const getReleaseNotesFromDescriptions = (descriptionAndPrNumberArray) => {
         }
         catch (e) { }
     });
+    console.log('taskUrlsFromAllDescriptions', taskUrlsFromAllDescriptions, descriptionAndPrNumberArray);
     return `New release is being cooked 👩‍🍳, those are the asana tickets: 
     ${taskUrlsFromAllDescriptions.join(', ')}`;
 };
