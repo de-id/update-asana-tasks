@@ -18697,18 +18697,19 @@ async function handleSinglePr(status) {
         console.log(`PR number ${(0, github_1.getPrNumber)()} failed. ${err.message}`);
     }
 }
-async function handleInProd(slackBotToken, slackBotChannelId) {
+async function handleInProd(slackBotToken, slackBotChannelId, shouldUpdateTasksStatuses) {
     const descriptions = await (0, github_1.getPrDescriptionsForProd)();
-    console.log('descriptions', descriptions);
     await Promise.all(descriptions.map(async ({ description, prNumber }) => {
         try {
-            await (0, asana_1.updatePrTaskStatuses)(description, asana_1.QaStatus.Prod);
+            if (shouldUpdateTasksStatuses) {
+                await (0, asana_1.updatePrTaskStatuses)(description, asana_1.QaStatus.Prod);
+            }
         }
         catch (err) {
             console.log(`PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`);
         }
     }));
-    await (0, release_notes_1.handleReleaseNotes)(descriptions, slackBotToken, slackBotChannelId);
+    await (0, release_notes_1.handleReleaseNotes)(descriptions, slackBotToken, slackBotChannelId, shouldUpdateTasksStatuses);
 }
 async function run() {
     try {
@@ -18718,7 +18719,8 @@ async function run() {
         const isPrToProd = baseBranch === 'prod';
         const slackToken = core.getInput('slack-bot-token');
         const slackBotChannelId = core.getInput('slack-bot-channel-id');
-        if (isPrToStaging) {
+        const shouldUpdateTasksStatuses = core.getInput('should-update-tasks-status') !== 'false';
+        if (isPrToStaging && shouldUpdateTasksStatuses) {
             if (isReview) {
                 await handleSinglePr(asana_1.QaStatus.Review);
             }
@@ -18727,7 +18729,7 @@ async function run() {
             }
         }
         else if (isPrToProd) {
-            await handleInProd(slackToken, slackBotChannelId);
+            await handleInProd(slackToken, slackBotChannelId, shouldUpdateTasksStatuses);
         }
     }
     catch (error) {
@@ -18748,9 +18750,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.handleReleaseNotes = void 0;
 const asana_1 = __nccwpck_require__(1240);
 const slack_1 = __nccwpck_require__(9342);
-const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId) => {
+const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId, isMergeNotes) => {
     try {
-        const releaseNotes = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray);
+        const releaseNotes = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray, isMergeNotes);
         if (slackBotToken && slackBotChannelId) {
             await (0, slack_1.sendSlackMessage)(releaseNotes, slackBotToken, slackBotChannelId);
         }
@@ -18760,7 +18762,7 @@ const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, sl
     }
 };
 exports.handleReleaseNotes = handleReleaseNotes;
-const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray) => {
+const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMergeNotes) => {
     let taskDetailsFromAllDescriptions = [];
     await Promise.all(descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
@@ -18787,7 +18789,7 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray) => {
         .map(({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
     )
         .join('\n');
-    return `New release is being cooked 👩‍🍳\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
+    return `New release is being ${isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'}\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
 };
 
 

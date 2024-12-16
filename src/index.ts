@@ -18,13 +18,18 @@ async function handleSinglePr(status: QaStatus) {
     }
 }
 
-async function handleInProd(slackBotToken: string, slackBotChannelId: string) {
+async function handleInProd(
+    slackBotToken: string,
+    slackBotChannelId: string,
+    shouldUpdateTasksStatuses: boolean
+) {
     const descriptions = await getPrDescriptionsForProd();
-    console.log('descriptions', descriptions);
     await Promise.all(
         descriptions.map(async ({ description, prNumber }) => {
             try {
-                await updatePrTaskStatuses(description, QaStatus.Prod);
+                if (shouldUpdateTasksStatuses) {
+                    await updatePrTaskStatuses(description, QaStatus.Prod);
+                }
             } catch (err: any) {
                 console.log(
                     `PR number ${prNumber} failed. ${err.message}. PR description:\n ${description}`
@@ -33,7 +38,12 @@ async function handleInProd(slackBotToken: string, slackBotChannelId: string) {
         })
     );
 
-    await handleReleaseNotes(descriptions, slackBotToken, slackBotChannelId);
+    await handleReleaseNotes(
+        descriptions,
+        slackBotToken,
+        slackBotChannelId,
+        shouldUpdateTasksStatuses
+    );
 }
 
 async function run() {
@@ -46,15 +56,21 @@ async function run() {
         const isPrToProd = baseBranch === 'prod';
         const slackToken: string = core.getInput('slack-bot-token');
         const slackBotChannelId: string = core.getInput('slack-bot-channel-id');
+        const shouldUpdateTasksStatuses: boolean =
+            core.getInput('should-update-tasks-status') !== 'false';
 
-        if (isPrToStaging) {
+        if (isPrToStaging && shouldUpdateTasksStatuses) {
             if (isReview) {
                 await handleSinglePr(QaStatus.Review);
             } else {
                 await handleSinglePr(QaStatus.Staging);
             }
         } else if (isPrToProd) {
-            await handleInProd(slackToken, slackBotChannelId);
+            await handleInProd(
+                slackToken,
+                slackBotChannelId,
+                shouldUpdateTasksStatuses
+            );
         }
     } catch (error: any) {
         core.setFailed(error.message);

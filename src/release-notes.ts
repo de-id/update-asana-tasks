@@ -4,11 +4,13 @@ import { sendSlackMessage } from './slack';
 export const handleReleaseNotes = async (
     descriptionAndPrNumberArray: any[],
     slackBotToken: string,
-    slackBotChannelId: string
+    slackBotChannelId: string,
+    isMergeNotes: boolean
 ): Promise<void> => {
     try {
         const releaseNotes: string = await getReleaseNotesFromDescriptions(
-            descriptionAndPrNumberArray
+            descriptionAndPrNumberArray,
+            isMergeNotes
         );
         if (slackBotToken && slackBotChannelId) {
             await sendSlackMessage(
@@ -23,7 +25,8 @@ export const handleReleaseNotes = async (
 };
 
 const getReleaseNotesFromDescriptions = async (
-    descriptionAndPrNumberArray: any[]
+    descriptionAndPrNumberArray: any[],
+    isMergeNotes: boolean
 ): Promise<string> => {
     let taskDetailsFromAllDescriptions: { title: string; url: string }[] = [];
 
@@ -67,5 +70,7 @@ const getReleaseNotesFromDescriptions = async (
         )
         .join('\n');
 
-    return `New release is being cooked 👩‍🍳\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
+    return `New release is being ${
+        isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'
+    }\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
 };
