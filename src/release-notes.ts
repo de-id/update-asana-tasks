@@ -29,7 +29,7 @@ const getReleaseNotesFromDescriptions = async (
     isMergeNotes: boolean
 ): Promise<string> => {
     let taskDetailsFromAllDescriptions: { title: string; url: string }[] = [];
-
+    console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
     await Promise.all(
         descriptionAndPrNumberArray.map(async ({ description }) => {
             try {
