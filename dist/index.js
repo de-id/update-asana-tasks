@@ -18532,7 +18532,7 @@ async function getTaskDetailsFromPr(prDescription) {
     // Extract task IDs and URLs using the existing function
     const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
     if (!taskIds.length) {
-        console.log('No valid Asana task IDs found in PR description');
+        console.log('No valid Asana task IDs found in PR description', prDescription);
         return { taskIds: [], taskUrls: [], taskTitles: [] };
     }
     // Fetch task titles for each task ID

@@ -55,7 +55,10 @@ export async function getTaskDetailsFromPr(prDescription: string): Promise<{
     const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
 
     if (!taskIds.length) {
-        console.log('No valid Asana task IDs found in PR description');
+        console.log(
+            'No valid Asana task IDs found in PR description',
+            prDescription
+        );
         return { taskIds: [], taskUrls: [], taskTitles: [] };
     }
 
