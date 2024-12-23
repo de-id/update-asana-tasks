@@ -18764,6 +18764,7 @@ const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, sl
 exports.handleReleaseNotes = handleReleaseNotes;
 const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMergeNotes) => {
     let taskDetailsFromAllDescriptions = [];
+    console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
     await Promise.all(descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
             const { taskUrls, taskTitles } = await (0, asana_1.getTaskDetailsFromPr)(description);
