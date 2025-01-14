@@ -18533,25 +18533,31 @@ async function getTaskDetailsFromPr(prDescription) {
     const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
     if (!taskIds.length) {
         console.log('No valid Asana task IDs found in PR description', prDescription);
-        return { taskIds: [], taskUrls: [], taskTitles: [] };
+        return { taskIds: [], taskUrls: [], taskTitleAndAssigneeArray: [] };
     }
     // Fetch task titles for each task ID
     const asanaPat = core.getInput('asana-pat');
-    const taskTitles = await Promise.all(taskIds.map(async (taskGid) => {
+    const taskTitleAndAssigneeArray = await Promise.all(taskIds.map(async (taskGid) => {
         try {
             const response = await axios_1.default.get(`${asanaBaseUrl}${taskGid}`, {
                 headers: {
                     Authorization: `Bearer ${asanaPat}`,
                 },
             });
-            return response.data?.data?.name || 'Unknown Task Title';
+            return {
+                title: response.data?.data?.name || 'Unknown Task Title',
+                assignee: response.data?.data?.assignee || 'Unassgined',
+            };
         }
         catch (error) {
             console.error(`Failed to fetch title for task ID ${taskGid}:`, error?.message);
-            return 'Unknown Task Title';
+            return {
+                title: 'Unknown Task Title',
+                assignee: 'Unassgined',
+            };
         }
     }));
-    return { taskIds, taskUrls, taskTitles };
+    return { taskIds, taskUrls, taskTitleAndAssigneeArray };
 }
 exports.getTaskDetailsFromPr = getTaskDetailsFromPr;
 function updateQaStatus(taskGid, status) {
@@ -18600,7 +18606,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPrDescriptionsForProd = exports.getPrDescription = exports.getPrNumber = void 0;
+exports.getPrDescriptionsForProd = exports.getPrLink = exports.getRepo = exports.getPrDescription = exports.getPrNumber = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const githubToken = core.getInput('github-token');
@@ -18625,6 +18631,11 @@ function extractPullNumberFromMessage(message) {
         return parseInt(pullNumberMatch);
     }
 }
+const getRepo = () => github.context.repo.repo;
+exports.getRepo = getRepo;
+const getPrLink = () => `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
+    .payload.pull_request?.number}`;
+exports.getPrLink = getPrLink;
 async function getPrDescriptionsForProd() {
     const mainPullNumber = github.context.payload.pull_request?.number;
     const { data: commits } = await githubRestClient.pulls.listCommits({
@@ -18632,6 +18643,7 @@ async function getPrDescriptionsForProd() {
         repo: github.context.repo.repo,
         pull_number: mainPullNumber,
     });
+    console.log(`all commits of pr ${mainPullNumber} are`, commits);
     const childPrNumbers = commits
         .map(({ commit }) => extractPullNumberFromMessage(commit.message))
         .filter(Boolean);
@@ -18750,6 +18762,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.handleReleaseNotes = void 0;
 const asana_1 = __nccwpck_require__(1240);
 const slack_1 = __nccwpck_require__(9342);
+const github_1 = __nccwpck_require__(4974);
 const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId, isMergeNotes) => {
     try {
         const releaseNotes = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray, isMergeNotes);
@@ -18767,10 +18780,10 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
     console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
     await Promise.all(descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
-            const { taskUrls, taskTitles } = await (0, asana_1.getTaskDetailsFromPr)(description);
+            const { taskUrls, taskTitleAndAssigneeArray } = await (0, asana_1.getTaskDetailsFromPr)(description);
             // Map titles and URLs into a structured format
             const taskDetails = taskUrls.map((url, index) => ({
-                title: taskTitles[index],
+                title: taskTitleAndAssigneeArray[index]?.title,
                 url,
             }));
             taskDetailsFromAllDescriptions = [
@@ -18790,7 +18803,9 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
         .map(({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
     )
         .join('\n');
-    return `New release is being ${isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'}\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
+    return `New release to ${(0, github_1.getRepo)()} is being ${isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'}
+    \n ${(0, github_1.getPrLink)()}
+    \n those are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
 };
 
 
