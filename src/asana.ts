@@ -13,6 +13,11 @@ export enum QaStatus {
     Prod = '1149901879873107',
 }
 
+type TaskTitleAndAssignee = {
+    assignee: string;
+    title: string;
+};
+
 const asanaPat = core.getInput('asana-pat');
 
 export async function updatePrTaskStatuses(
@@ -49,7 +54,7 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
 export async function getTaskDetailsFromPr(prDescription: string): Promise<{
     taskIds: string[];
     taskUrls: string[];
-    taskTitles: string[];
+    taskTitleAndAssigneeArray: TaskTitleAndAssignee[];
 }> {
     // Extract task IDs and URLs using the existing function
     const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
@@ -59,12 +64,12 @@ export async function getTaskDetailsFromPr(prDescription: string): Promise<{
             'No valid Asana task IDs found in PR description',
             prDescription
         );
-        return { taskIds: [], taskUrls: [], taskTitles: [] };
+        return { taskIds: [], taskUrls: [], taskTitleAndAssigneeArray: [] };
     }
 
     // Fetch task titles for each task ID
     const asanaPat = core.getInput('asana-pat');
-    const taskTitles: string[] = await Promise.all(
+    const taskTitleAndAssigneeArray: TaskTitleAndAssignee[] = await Promise.all(
         taskIds.map(async taskGid => {
             try {
                 const response = await axios.get(`${asanaBaseUrl}${taskGid}`, {
@@ -72,18 +77,24 @@ export async function getTaskDetailsFromPr(prDescription: string): Promise<{
                         Authorization: `Bearer ${asanaPat}`,
                     },
                 });
-                return response.data?.data?.name || 'Unknown Task Title';
+                return {
+                    title: response.data?.data?.name || 'Unknown Task Title',
+                    assignee: response.data?.data?.assignee || 'Unassgined',
+                };
             } catch (error: any) {
                 console.error(
                     `Failed to fetch title for task ID ${taskGid}:`,
                     error?.message
                 );
-                return 'Unknown Task Title';
+                return {
+                    title: 'Unknown Task Title',
+                    assignee: 'Unassgined',
+                };
             }
         })
     );
 
-    return { taskIds, taskUrls, taskTitles };
+    return { taskIds, taskUrls, taskTitleAndAssigneeArray };
 }
 
 function updateQaStatus(taskGid: string, status: QaStatus) {
