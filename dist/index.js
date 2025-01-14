@@ -18795,14 +18795,15 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
             console.error('Failed to process description:', description, error);
         }
     }));
-    if (taskDetailsFromAllDescriptions.length === 0) {
-        return 'No Asana tickets were found in the provided descriptions.';
-    }
     // Format task details for Slack (clickable titles with URLs)
-    const formattedTaskDetails = taskDetailsFromAllDescriptions
+    let formattedTaskDetails = taskDetailsFromAllDescriptions
         .map(({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
     )
         .join('\n');
+    if (taskDetailsFromAllDescriptions.length === 0) {
+        formattedTaskDetails =
+            'No Asana tickets were found in the provided descriptions.';
+    }
     return `New release to ${(0, github_1.getRepo)()} is being ${isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'}
     \n ${(0, github_1.getPrLink)()}
     \n those are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
