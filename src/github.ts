@@ -29,8 +29,8 @@ function extractPullNumberFromMessage(message: string): number | undefined {
 
 export const getRepo = () => github.context.repo.repo;
 export const getPrLink = () =>
-    `github.com/de-id/${github.context.repo.repo}/pulls/${github.context.payload
-        .pull_request?.number!}`;
+    `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
+        .payload.pull_request?.number!}`;
 
 export async function getPrDescriptionsForProd(): Promise<
     { prNumber: number; description: string }[]
