@@ -1,5 +1,6 @@
 import { getTaskDetailsFromPr } from './asana';
 import { sendSlackMessage } from './slack';
+import { getRepo, getPrLink } from './github';
 
 export const handleReleaseNotes = async (
     descriptionAndPrNumberArray: any[],
@@ -33,14 +34,13 @@ const getReleaseNotesFromDescriptions = async (
     await Promise.all(
         descriptionAndPrNumberArray.map(async ({ description }) => {
             try {
-                const { taskUrls, taskTitles } = await getTaskDetailsFromPr(
-                    description
-                );
+                const { taskUrls, taskTitleAndAssigneeArray } =
+                    await getTaskDetailsFromPr(description);
 
                 // Map titles and URLs into a structured format
                 const taskDetails = taskUrls.map(
                     (url: string, index: number) => ({
-                        title: taskTitles[index],
+                        title: taskTitleAndAssigneeArray[index]?.title,
                         url,
                     })
                 );
@@ -70,7 +70,9 @@ const getReleaseNotesFromDescriptions = async (
         )
         .join('\n');
 
-    return `New release is being ${
+    return `New release to ${getRepo()} is being ${
         isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'
-    }\nthose are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
+    }
+    \n ${getPrLink()}
+    \n those are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
 };

@@ -27,6 +27,11 @@ function extractPullNumberFromMessage(message: string): number | undefined {
     }
 }
 
+export const getRepo = () => github.context.repo.repo;
+export const getPrLink = () =>
+    `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
+        .payload.pull_request?.number!}`;
+
 export async function getPrDescriptionsForProd(): Promise<
     { prNumber: number; description: string }[]
 > {
@@ -37,6 +42,8 @@ export async function getPrDescriptionsForProd(): Promise<
         repo: github.context.repo.repo,
         pull_number: mainPullNumber,
     });
+
+    console.log(`all commits of pr ${mainPullNumber} are`, commits);
 
     const childPrNumbers = commits
         .map(({ commit }) => extractPullNumberFromMessage(commit.message))
