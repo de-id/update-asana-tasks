@@ -1,4 +1,4 @@
-import { getFeatureFlagIdsFromPrIfExists, getTaskDetailsFromPr } from './asana';
+import { getTaskDetailsFromPr } from './asana';
 import { sendSlackMessage } from './slack';
 import { getRepo, getPrLink } from './github';
 

@@ -18494,7 +18494,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getTaskDetailsFromPr = exports.getTaskIdsAndUrlsFromPr = exports.updatePrTaskStatuses = exports.QaStatus = void 0;
+exports.getTaskDetailsFromPr = exports.getFeatureFlagIdsFromPrIfExists = exports.getTaskIdsAndUrlsFromPr = exports.updatePrTaskStatuses = exports.QaStatus = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const core = __importStar(__nccwpck_require__(2186));
 const asanaBaseUrl = 'https://app.asana.com/api/1.0/tasks/';
@@ -18528,6 +18528,25 @@ function getTaskIdsAndUrlsFromPr(prDescription) {
     return { taskIds, taskUrls };
 }
 exports.getTaskIdsAndUrlsFromPr = getTaskIdsAndUrlsFromPr;
+function getFeatureFlagIdsFromPrIfExists(prDescription) {
+    const featureFlagRegex = /\[FeatureFlags\]\s*\(([^)]+)\)/gi; // Matches [FeatureFlags](flags)
+    const matches = [...prDescription.matchAll(featureFlagRegex)];
+    if (!matches.length) {
+        console.log('Feature flags not found in PR description');
+        return [];
+    }
+    const featureFlags = new Set();
+    matches.forEach(match => {
+        if (match[1]) {
+            match[1]
+                .split(',')
+                .map(flag => flag.trim().toLowerCase()) // Normalize case and trim spaces
+                .forEach(flag => featureFlags.add(flag)); // Add to Set to avoid duplicates
+        }
+    });
+    return Array.from(featureFlags);
+}
+exports.getFeatureFlagIdsFromPrIfExists = getFeatureFlagIdsFromPrIfExists;
 async function getTaskDetailsFromPr(prDescription) {
     // Extract task IDs and URLs using the existing function
     const { taskIds, taskUrls } = getTaskIdsAndUrlsFromPr(prDescription);
@@ -18775,7 +18794,7 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.handleReleaseNotes = void 0;
+exports.getFeatureFlagIdsFromPrIfExists = exports.handleReleaseNotes = void 0;
 const asana_1 = __nccwpck_require__(1240);
 const slack_1 = __nccwpck_require__(9342);
 const github_1 = __nccwpck_require__(4974);
@@ -18791,16 +18810,37 @@ const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, sl
     }
 };
 exports.handleReleaseNotes = handleReleaseNotes;
+function getFeatureFlagIdsFromPrIfExists(prDescription) {
+    const featureFlagRegex = /\[FeatureFlags\]\s*\(([^)]+)\)/gi; // Matches [FeatureFlags](flags)
+    const matches = [...prDescription.matchAll(featureFlagRegex)];
+    if (!matches.length) {
+        console.log('Feature flags not found in PR description');
+        return [];
+    }
+    const featureFlags = new Set();
+    matches.forEach(match => {
+        if (match[1]) {
+            match[1]
+                .split(',')
+                .map(flag => flag.trim().toLowerCase()) // Normalize case and trim spaces
+                .forEach(flag => featureFlags.add(flag)); // Add to Set to avoid duplicates
+        }
+    });
+    return Array.from(featureFlags);
+}
+exports.getFeatureFlagIdsFromPrIfExists = getFeatureFlagIdsFromPrIfExists;
 const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMergeNotes) => {
     let taskDetailsFromAllDescriptions = [];
     console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
     await Promise.all(descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
             const { taskUrls, taskTitleAndAssigneeArray } = await (0, asana_1.getTaskDetailsFromPr)(description);
+            const featureFlagsArr = getFeatureFlagIdsFromPrIfExists(description);
             // Map titles and URLs into a structured format
             const taskDetails = taskUrls.map((url, index) => ({
                 title: taskTitleAndAssigneeArray[index]?.title,
                 url,
+                featureFlagsArr,
             }));
             taskDetailsFromAllDescriptions = [
                 ...taskDetailsFromAllDescriptions,
@@ -18813,8 +18853,9 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
     }));
     // Format task details for Slack (clickable titles with URLs)
     let formattedTaskDetails = taskDetailsFromAllDescriptions
-        .map(({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
-    )
+        .map(({ title, url, featureFlagsArr }) => `<${url}|${title}>${featureFlagsArr?.length
+        ? ` with flags: ${featureFlagsArr.join(', ')}`
+        : ''}`)
         .join('\n');
     if (taskDetailsFromAllDescriptions.length === 0) {
         formattedTaskDetails =
