@@ -32,12 +32,12 @@ export const getPrLink = () =>
     `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
         .payload.pull_request?.number!}`;
 
-const fetchAllCommits = async (
+async function fetchAllCommits(
     githubRestClient: any,
-    owner: any,
-    repo: any,
-    pull_number: any
-) => {
+    owner: string,
+    repo: string,
+    pull_number: number
+): Promise<any[]> {
     let allCommits: any[] = [];
     let page = 1;
     const per_page = 100; // Max allowed per page
@@ -61,7 +61,7 @@ const fetchAllCommits = async (
     }
 
     return allCommits;
-};
+}
 
 export async function getPrDescriptionsForProd(): Promise<
     { prNumber: number; description: string }[]

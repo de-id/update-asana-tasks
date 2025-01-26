@@ -18636,7 +18636,7 @@ exports.getRepo = getRepo;
 const getPrLink = () => `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
     .payload.pull_request?.number}`;
 exports.getPrLink = getPrLink;
-const fetchAllCommits = async (githubRestClient, owner, repo, pull_number) => {
+async function fetchAllCommits(githubRestClient, owner, repo, pull_number) {
     let allCommits = [];
     let page = 1;
     const per_page = 100; // Max allowed per page
@@ -18655,7 +18655,7 @@ const fetchAllCommits = async (githubRestClient, owner, repo, pull_number) => {
         page++;
     }
     return allCommits;
-};
+}
 async function getPrDescriptionsForProd() {
     const mainPullNumber = github.context.payload.pull_request?.number;
     const commits = await fetchAllCommits(githubRestClient, github.context.repo.owner, github.context.repo.repo, mainPullNumber);
