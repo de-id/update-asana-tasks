@@ -51,6 +51,31 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
     return { taskIds, taskUrls };
 }
 
+export function getFeatureFlagIdsFromPrIfExists(
+    prDescription: string
+): string[] {
+    const featureFlagRegex = /\[FeatureFlags\]\s*\(([^)]+)\)/gi; // Matches [FeatureFlags](flags)
+
+    const matches = [...prDescription.matchAll(featureFlagRegex)];
+    if (!matches.length) {
+        console.log('Feature flags not found in PR description');
+        return [];
+    }
+
+    const featureFlags = new Set<string>();
+
+    matches.forEach(match => {
+        if (match[1]) {
+            match[1]
+                .split(',')
+                .map(flag => flag.trim().toLowerCase()) // Normalize case and trim spaces
+                .forEach(flag => featureFlags.add(flag)); // Add to Set to avoid duplicates
+        }
+    });
+
+    return Array.from(featureFlags);
+}
+
 export async function getTaskDetailsFromPr(prDescription: string): Promise<{
     taskIds: string[];
     taskUrls: string[];

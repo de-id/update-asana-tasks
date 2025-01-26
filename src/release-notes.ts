@@ -1,4 +1,4 @@
-import { getTaskDetailsFromPr } from './asana';
+import { getFeatureFlagIdsFromPrIfExists, getTaskDetailsFromPr } from './asana';
 import { sendSlackMessage } from './slack';
 import { getRepo, getPrLink } from './github';
 
@@ -25,23 +25,54 @@ export const handleReleaseNotes = async (
     }
 };
 
+export function getFeatureFlagIdsFromPrIfExists(
+    prDescription: string
+): string[] {
+    const featureFlagRegex = /\[FeatureFlags\]\s*\(([^)]+)\)/gi; // Matches [FeatureFlags](flags)
+
+    const matches = [...prDescription.matchAll(featureFlagRegex)];
+    if (!matches.length) {
+        console.log('Feature flags not found in PR description');
+        return [];
+    }
+
+    const featureFlags = new Set<string>();
+
+    matches.forEach(match => {
+        if (match[1]) {
+            match[1]
+                .split(',')
+                .map(flag => flag.trim().toLowerCase()) // Normalize case and trim spaces
+                .forEach(flag => featureFlags.add(flag)); // Add to Set to avoid duplicates
+        }
+    });
+
+    return Array.from(featureFlags);
+}
+
 const getReleaseNotesFromDescriptions = async (
     descriptionAndPrNumberArray: any[],
     isMergeNotes: boolean
 ): Promise<string> => {
-    let taskDetailsFromAllDescriptions: { title: string; url: string }[] = [];
+    let taskDetailsFromAllDescriptions: {
+        title: string;
+        url: string;
+        featureFlagsArr: string[];
+    }[] = [];
     console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
     await Promise.all(
         descriptionAndPrNumberArray.map(async ({ description }) => {
             try {
                 const { taskUrls, taskTitleAndAssigneeArray } =
                     await getTaskDetailsFromPr(description);
-
+                const featureFlagsArr: string[] =
+                    getFeatureFlagIdsFromPrIfExists(description);
                 // Map titles and URLs into a structured format
                 const taskDetails = taskUrls.map(
                     (url: string, index: number) => ({
                         title: taskTitleAndAssigneeArray[index]?.title,
                         url,
+                        featureFlagsArr,
                     })
                 );
 
@@ -62,7 +93,12 @@ const getReleaseNotesFromDescriptions = async (
     // Format task details for Slack (clickable titles with URLs)
     let formattedTaskDetails = taskDetailsFromAllDescriptions
         .map(
-            ({ title, url }) => `<${url}|${title}>` // Slack format for clickable links
+            ({ title, url, featureFlagsArr }) =>
+                `<${url}|${title}>${
+                    featureFlagsArr?.length
+                        ? ` with flags: ${featureFlagsArr.join(', ')}`
+                        : ''
+                }`
         )
         .join('\n');
 
