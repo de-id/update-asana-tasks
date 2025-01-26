@@ -18636,13 +18636,29 @@ exports.getRepo = getRepo;
 const getPrLink = () => `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
     .payload.pull_request?.number}`;
 exports.getPrLink = getPrLink;
+const fetchAllCommits = async (githubRestClient, owner, repo, pull_number) => {
+    let allCommits = [];
+    let page = 1;
+    const per_page = 100; // Max allowed per page
+    while (true) {
+        const { data: commits } = await githubRestClient.pulls.listCommits({
+            owner,
+            repo,
+            pull_number,
+            per_page,
+            page,
+        });
+        allCommits = allCommits.concat(commits);
+        if (commits.length < per_page) {
+            break; // No more pages left to fetch
+        }
+        page++;
+    }
+    return allCommits;
+};
 async function getPrDescriptionsForProd() {
     const mainPullNumber = github.context.payload.pull_request?.number;
-    const { data: commits } = await githubRestClient.pulls.listCommits({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: mainPullNumber,
-    });
+    const commits = await fetchAllCommits(githubRestClient, github.context.repo.owner, github.context.repo.repo, mainPullNumber);
     console.log(`all commits of pr ${mainPullNumber} are`, commits);
     const childPrNumbers = commits
         .map(({ commit }) => extractPullNumberFromMessage(commit.message))

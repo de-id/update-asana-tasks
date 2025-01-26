@@ -32,16 +32,48 @@ export const getPrLink = () =>
     `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
         .payload.pull_request?.number!}`;
 
+const fetchAllCommits = async (
+    githubRestClient: any,
+    owner: any,
+    repo: any,
+    pull_number: any
+) => {
+    let allCommits: any[] = [];
+    let page = 1;
+    const per_page = 100; // Max allowed per page
+
+    while (true) {
+        const { data: commits } = await githubRestClient.pulls.listCommits({
+            owner,
+            repo,
+            pull_number,
+            per_page,
+            page,
+        });
+
+        allCommits = allCommits.concat(commits);
+
+        if (commits.length < per_page) {
+            break; // No more pages left to fetch
+        }
+
+        page++;
+    }
+
+    return allCommits;
+};
+
 export async function getPrDescriptionsForProd(): Promise<
     { prNumber: number; description: string }[]
 > {
     const mainPullNumber = github.context.payload.pull_request?.number!;
 
-    const { data: commits } = await githubRestClient.pulls.listCommits({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: mainPullNumber,
-    });
+    const commits = await fetchAllCommits(
+        githubRestClient,
+        github.context.repo.owner,
+        github.context.repo.repo,
+        mainPullNumber
+    );
 
     console.log(`all commits of pr ${mainPullNumber} are`, commits);
 
