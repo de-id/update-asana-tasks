@@ -84,14 +84,14 @@ const buildSlackBlocks = (
             ]
         },
         {
-            "type": "divider"
-        },
-        {
             type: 'section',
             text: {
                 type: 'mrkdwn',
                 text: taskDetails ? `Asana tickets included:\n${taskDetails}` : 'no asana tickets :tada:'
             }
+        },
+        {
+            "type": "divider"
         },
         {
             "type": "context",
