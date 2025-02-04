@@ -27,10 +27,10 @@ function extractPullNumberFromMessage(message: string): number | undefined {
     }
 }
 
-export const getRepo = () => github.context.repo.repo;
-export const getPrLink = () =>
-    `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
-        .payload.pull_request?.number!}`;
+const prNumber = github.context.payload.pull_request?.number
+export const repo = github.context.repo.repo;
+export const targetBranch = github.context.payload.pull_request?.base.ref;
+export const prLink = `<http://github.com/de-id/${github.context.repo.repo}/pull/${prNumber}|PR #${prNumber}>`;
 
 async function fetchAllCommits(
     githubRestClient: any,

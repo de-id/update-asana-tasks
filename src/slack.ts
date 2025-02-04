@@ -1,7 +1,7 @@
-import { WebClient } from '@slack/web-api';
+import { WebClient, KnownBlock } from '@slack/web-api';
 
 export const sendSlackMessage = async (
-    text: string,
+    blocks: KnownBlock[],
     slackBotToken: string,
     slackChannelId: string
 ) => {
@@ -9,6 +9,6 @@ export const sendSlackMessage = async (
 
     return client.chat.postMessage({
         channel: slackChannelId,
-        text,
+        blocks,
     });
 };
