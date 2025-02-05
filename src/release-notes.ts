@@ -1,6 +1,7 @@
+import { KnownBlock } from '@slack/web-api';
 import { getTaskDetailsFromPr } from './asana';
 import { sendSlackMessage } from './slack';
-import { getRepo, getPrLink } from './github';
+import { repo, prLink, targetBranch } from './github';
 
 export const handleReleaseNotes = async (
     descriptionAndPrNumberArray: any[],
@@ -9,13 +10,13 @@ export const handleReleaseNotes = async (
     isMergeNotes: boolean
 ): Promise<void> => {
     try {
-        const releaseNotes: string = await getReleaseNotesFromDescriptions(
+        const blocks: KnownBlock[] = await getReleaseNotesFromDescriptions(
             descriptionAndPrNumberArray,
             isMergeNotes
         );
         if (slackBotToken && slackBotChannelId) {
             await sendSlackMessage(
-                releaseNotes,
+                blocks,
                 slackBotToken,
                 slackBotChannelId
             );
@@ -49,11 +50,67 @@ export function getFeatureFlagIdsFromPrIfExists(
 
     return Array.from(featureFlags);
 }
+// create a slack blocks with attachments and fields
+const buildSlackBlocks = (
+    repo: string,
+    prLink: string,
+    env: string,
+    taskDetails: string,
+    isMergeNotes: boolean
+): KnownBlock[] => {
+    return [
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: `A new release is being *${isMergeNotes ? 'deployed 🚀' : 'cooked 👩‍🍳'}*`
+            }
+        },
+        {
+            type: 'section',
+            fields: [
+                {
+                    type: 'mrkdwn',
+                    text: `*Repository:* ${repo}`
+                },
+                {
+                    type: 'mrkdwn',
+                    text: `*PR:* ${prLink}`
+                },
+                {
+                    type: 'mrkdwn',
+                    text: `*Env:* ${env}`
+                }
+            ]
+        },
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: taskDetails ? `Asana tickets included:\n${taskDetails}` : 'no asana tickets :tada:'
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "notify <!subteam^S05SL1L1XE2>"
+                }
+            ]
+        }
+
+    ];
+}
+
 
 const getReleaseNotesFromDescriptions = async (
     descriptionAndPrNumberArray: any[],
     isMergeNotes: boolean
-): Promise<string> => {
+): Promise<KnownBlock[]> => {
     let taskDetailsFromAllDescriptions: {
         title: string;
         url: string;
@@ -94,10 +151,9 @@ const getReleaseNotesFromDescriptions = async (
     let formattedTaskDetails = taskDetailsFromAllDescriptions
         .map(
             ({ title, url, featureFlagsArr }) =>
-                `<${url}|${title}>${
-                    featureFlagsArr?.length
-                        ? ` with flags: ${featureFlagsArr.join(', ')}`
-                        : ''
+                `• <${url}|${title}>${featureFlagsArr?.length
+                    ? ` with flags: ${featureFlagsArr.join(', ')}`
+                    : ''
                 }`
         )
         .join('\n');
@@ -107,9 +163,11 @@ const getReleaseNotesFromDescriptions = async (
             'No Asana tickets were found in the provided descriptions.';
     }
 
-    return `New release to ${getRepo()} is being ${
-        isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'
-    }
-    \n ${getPrLink()}
-    \n those are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
+    return buildSlackBlocks(
+        repo,
+        prLink,
+        targetBranch,
+        formattedTaskDetails,
+        isMergeNotes
+    );
 };
