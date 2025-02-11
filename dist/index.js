@@ -18625,7 +18625,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPrDescriptionsForProd = exports.getPrLink = exports.getRepo = exports.getPrDescription = exports.getPrNumber = void 0;
+exports.getPrDescriptionsForProd = exports.prLink = exports.targetBranch = exports.repo = exports.getPrDescription = exports.getPrNumber = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const githubToken = core.getInput('github-token');
@@ -18650,11 +18650,10 @@ function extractPullNumberFromMessage(message) {
         return parseInt(pullNumberMatch);
     }
 }
-const getRepo = () => github.context.repo.repo;
-exports.getRepo = getRepo;
-const getPrLink = () => `http://github.com/de-id/${github.context.repo.repo}/pull/${github.context
-    .payload.pull_request?.number}`;
-exports.getPrLink = getPrLink;
+const prNumber = github.context.payload.pull_request?.number;
+exports.repo = github.context.repo.repo;
+exports.targetBranch = github.context.payload.pull_request?.base.ref;
+exports.prLink = `<http://github.com/de-id/${github.context.repo.repo}/pull/${prNumber}|PR #${prNumber}>`;
 async function fetchAllCommits(githubRestClient, owner, repo, pull_number) {
     let allCommits = [];
     let page = 1;
@@ -18800,9 +18799,9 @@ const slack_1 = __nccwpck_require__(9342);
 const github_1 = __nccwpck_require__(4974);
 const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId, isMergeNotes) => {
     try {
-        const releaseNotes = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray, isMergeNotes);
+        const blocks = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray, isMergeNotes);
         if (slackBotToken && slackBotChannelId) {
-            await (0, slack_1.sendSlackMessage)(releaseNotes, slackBotToken, slackBotChannelId);
+            await (0, slack_1.sendSlackMessage)(blocks, slackBotToken, slackBotChannelId);
         }
     }
     catch (e) {
@@ -18829,6 +18828,54 @@ function getFeatureFlagIdsFromPrIfExists(prDescription) {
     return Array.from(featureFlags);
 }
 exports.getFeatureFlagIdsFromPrIfExists = getFeatureFlagIdsFromPrIfExists;
+// create a slack blocks with attachments and fields
+const buildSlackBlocks = (repo, prLink, env, taskDetails, isMergeNotes) => {
+    return [
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: `A new release is being *${isMergeNotes ? 'deployed 🚀' : 'cooked 👩‍🍳'}*`
+            }
+        },
+        {
+            type: 'section',
+            fields: [
+                {
+                    type: 'mrkdwn',
+                    text: `*Repository:* ${repo}`
+                },
+                {
+                    type: 'mrkdwn',
+                    text: `*PR:* ${prLink}`
+                },
+                {
+                    type: 'mrkdwn',
+                    text: `*Env:* ${env}`
+                }
+            ]
+        },
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: taskDetails ? `Asana tickets included:\n${taskDetails}` : 'no asana tickets :tada:'
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "notify <!subteam^S05SL1L1XE2>"
+                }
+            ]
+        }
+    ];
+};
 const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMergeNotes) => {
     let taskDetailsFromAllDescriptions = [];
     console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
@@ -18853,7 +18900,7 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
     }));
     // Format task details for Slack (clickable titles with URLs)
     let formattedTaskDetails = taskDetailsFromAllDescriptions
-        .map(({ title, url, featureFlagsArr }) => `<${url}|${title}>${featureFlagsArr?.length
+        .map(({ title, url, featureFlagsArr }) => `• <${url}|${title}>${featureFlagsArr?.length
         ? ` with flags: ${featureFlagsArr.join(', ')}`
         : ''}`)
         .join('\n');
@@ -18861,9 +18908,7 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
         formattedTaskDetails =
             'No Asana tickets were found in the provided descriptions.';
     }
-    return `New release to ${(0, github_1.getRepo)()} is being ${isMergeNotes ? 'deployed right now 🚀' : 'cooked 👩‍🍳'}
-    \n ${(0, github_1.getPrLink)()}
-    \n those are the Asana tickets included:\n${formattedTaskDetails}\n<!subteam^S05SL1L1XE2>`;
+    return buildSlackBlocks(github_1.repo, github_1.prLink, github_1.targetBranch, formattedTaskDetails, isMergeNotes);
 };
 
 
@@ -18877,11 +18922,11 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sendSlackMessage = void 0;
 const web_api_1 = __nccwpck_require__(431);
-const sendSlackMessage = async (text, slackBotToken, slackChannelId) => {
+const sendSlackMessage = async (blocks, slackBotToken, slackChannelId) => {
     const client = new web_api_1.WebClient(slackBotToken);
     return client.chat.postMessage({
         channel: slackChannelId,
-        text,
+        blocks,
     });
 };
 exports.sendSlackMessage = sendSlackMessage;
