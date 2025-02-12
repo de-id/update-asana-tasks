@@ -18909,33 +18909,38 @@ const github_1 = __nccwpck_require__(4974);
 const github_2 = __nccwpck_require__(4974);
 const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId, isMergeNotes) => {
     try {
-        // 1) Build the Slack blocks (instead of simple text)
+        console.log('[handleReleaseNotes] Step 1: Building Slack blocks from PR descriptions...');
         const blocks = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray, isMergeNotes);
-        // 2) If Slack token/channel not configured, bail
+        console.log('[handleReleaseNotes] Step 1: Blocks built successfully:', JSON.stringify(blocks));
+        console.log('[handleReleaseNotes] Step 2: Checking Slack token/channel...');
         if (!slackBotToken || !slackBotChannelId) {
+            console.log('[handleReleaseNotes] Slack token or channel not provided. Exiting...');
             return;
         }
-        // 3) Identify the PR number from context
+        console.log('[handleReleaseNotes] Step 3: Retrieving PR number from context...');
         const prNumber = (0, github_2.getPrNumber)();
         if (!prNumber) {
-            console.log('No PR number found in context');
+            console.log('[handleReleaseNotes] No PR number found in context. Exiting...');
             return;
         }
-        // 4) See if we already have a Slack thread for this PR
+        console.log(`[handleReleaseNotes] PR number is ${prNumber}`);
+        console.log('[handleReleaseNotes] Step 4: Checking for existing Slack thread ID in hidden PR comment...');
         const existingThreadTs = await (0, github_2.findDataInHiddenComments)(prNumber, 'slack-thread-id');
-        // 5) Send Slack message using the blocks. If `existingThreadTs` is present,
-        //    Slack will treat this as a reply in that thread (aka "threaded reply").
-        const newThreadTs = await (0, slack_1.sendSlackMessage)(blocks, // Pass blocks instead of plain text
-        slackBotToken, slackBotChannelId, existingThreadTs // <= thread_ts param
-        );
-        // 6) If we had no existing thread, but Slack gave us a new one, store it
-        //    so future runs can reply in the same thread.
+        console.log(`[handleReleaseNotes] Existing thread_ts is: ${existingThreadTs || 'None'}`);
+        console.log('[handleReleaseNotes] Step 5: Sending Slack message (blocks) to channel...');
+        const newThreadTs = await (0, slack_1.sendSlackMessage)(blocks, slackBotToken, slackBotChannelId, existingThreadTs);
+        console.log(`[handleReleaseNotes] Slack message sent. Returned thread_ts: ${newThreadTs || 'None'}`);
+        console.log('[handleReleaseNotes] Step 6: If no existing thread, store the newly created thread ID...');
         if (!existingThreadTs && newThreadTs) {
+            console.log(`[handleReleaseNotes] Storing new Slack thread_ts: ${newThreadTs}`);
             await (0, github_2.storeDataInHiddenComment)(prNumber, 'slack-thread-id', newThreadTs);
+        }
+        else {
+            console.log('[handleReleaseNotes] No need to store thread ID. Either one already existed or Slack did not return one.');
         }
     }
     catch (e) {
-        console.log('Failed to send release notes on PR to prod');
+        console.log('[handleReleaseNotes] Failed to send release notes on PR to prod');
         console.error(e);
     }
 };
