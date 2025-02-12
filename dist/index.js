@@ -18625,19 +18625,40 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPrDescriptionsForProd = exports.prLink = exports.targetBranch = exports.repo = exports.getPrDescription = exports.getPrNumber = void 0;
+exports.findDataInHiddenComments = exports.storeDataInHiddenComment = exports.getPrDescriptionsForProd = exports.targetBranch = exports.repo = exports.getPrLink = exports.getRepo = exports.getPrDescription = exports.getPrNumber = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
+/**
+ * We pull the GitHub token from inputs so we can call the GitHub REST API.
+ * Make sure your workflow sets `github-token` as an input or environment variable.
+ */
 const githubToken = core.getInput('github-token');
+/**
+ * We create a GitHub REST client from the token,
+ * so we can make calls like listComments, createComment, etc.
+ */
 const githubRestClient = github.getOctokit(githubToken).rest;
+/**
+ * Returns the Pull Request number from the current GitHub Action context
+ * or 0 if it's not found (e.g., in a non-PR event).
+ */
 function getPrNumber() {
     return github.context.payload.pull_request?.number || 0;
 }
 exports.getPrNumber = getPrNumber;
+/**
+ * Returns the Pull Request body (description) from the Action context
+ * or an empty string if it’s not available.
+ */
 function getPrDescription() {
     return github.context.payload.pull_request?.body || '';
 }
 exports.getPrDescription = getPrDescription;
+/**
+ * Extracts a child PR number from a commit message if it looks like:
+ * - "Merge pull request #123" or
+ * - Something with (#123) in parentheses
+ */
 function extractPullNumberFromMessage(message) {
     let pullNumberMatch;
     if (message.toLocaleLowerCase().startsWith('merge pull request')) {
@@ -18650,10 +18671,36 @@ function extractPullNumberFromMessage(message) {
         return parseInt(pullNumberMatch);
     }
 }
-const prNumber = github.context.payload.pull_request?.number;
+/**
+ * Exported convenience: the repository name from the context, e.g. "my-repo".
+ */
+function getRepo() {
+    return github.context.repo.repo;
+}
+exports.getRepo = getRepo;
+/**
+ * Creates a clickable Slack/Markdown link for the current PR,
+ * e.g. <http://github.com/owner/repo/pull/123|PR #123>
+ */
+function getPrLink() {
+    const prNum = getPrNumber();
+    const owner = github.context.repo.owner;
+    const repo = github.context.repo.repo;
+    return `<http://github.com/${owner}/${repo}/pull/${prNum}|PR #${prNum}>`;
+}
+exports.getPrLink = getPrLink;
+/**
+ * A convenience for referencing just the repo name, if needed externally.
+ */
 exports.repo = github.context.repo.repo;
+/**
+ * The target branch for this PR (e.g. "master", "staging", "prod").
+ */
 exports.targetBranch = github.context.payload.pull_request?.base.ref;
-exports.prLink = `<http://github.com/de-id/${github.context.repo.repo}/pull/${prNumber}|PR #${prNumber}>`;
+/**
+ * Fetches ALL commits from a given PR (since GitHub paginates them).
+ * We loop over pages until there are no more commits to fetch.
+ */
 async function fetchAllCommits(githubRestClient, owner, repo, pull_number) {
     let allCommits = [];
     let page = 1;
@@ -18674,25 +18721,87 @@ async function fetchAllCommits(githubRestClient, owner, repo, pull_number) {
     }
     return allCommits;
 }
+/**
+ * Finds any "child" PR numbers referenced in the commits of the main PR,
+ * fetches each child PR's body (description), and returns them in an array.
+ */
 async function getPrDescriptionsForProd() {
     const mainPullNumber = github.context.payload.pull_request?.number;
-    const commits = await fetchAllCommits(githubRestClient, github.context.repo.owner, github.context.repo.repo, mainPullNumber);
-    console.log(`all commits of pr ${mainPullNumber} are`, commits);
+    const owner = github.context.repo.owner;
+    const repo = github.context.repo.repo;
+    const commits = await fetchAllCommits(githubRestClient, owner, repo, mainPullNumber);
+    console.log(`All commits of PR #${mainPullNumber} are:`, commits);
     const childPrNumbers = commits
         .map(({ commit }) => extractPullNumberFromMessage(commit.message))
         .filter(Boolean);
     console.log(`Found child PR numbers: ${JSON.stringify(childPrNumbers)}`);
-    const getPrPromises = childPrNumbers.map(async (pull_number) => ({
-        description: (await githubRestClient.pulls.get({
+    const getPrPromises = childPrNumbers.map(async (pull_number) => {
+        const { data: childPr } = await githubRestClient.pulls.get({
+            owner,
+            repo,
             pull_number,
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-        })).data.body || '',
-        prNumber: pull_number,
-    }));
+        });
+        return {
+            prNumber: pull_number,
+            description: childPr.body || '',
+        };
+    });
     return Promise.all(getPrPromises);
 }
 exports.getPrDescriptionsForProd = getPrDescriptionsForProd;
+/* ------------------------------------------------------------------
+ * Generic Hidden Comment Storage
+ * ------------------------------------------------------------------
+ * These two functions let you store and retrieve data in hidden PR
+ * comments, e.g.:
+ *     <!-- store-data: key=slack-thread-id, value=12345.6789 -->
+ * That way, we can keep track of ephemeral data (like Slack ts).
+ */
+/**
+ * Stores a key–value pair in a hidden PR comment, e.g.:
+ *     <!-- store-data: key=slack-thread-id, value=12345.6789 -->
+ */
+async function storeDataInHiddenComment(prNumber, dataKey, dataValue) {
+    const ghClient = github.getOctokit(core.getInput('github-token'));
+    const { owner, repo } = github.context.repo;
+    const body = `<!-- store-data: key=${dataKey}, value=${dataValue} -->`;
+    await ghClient.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: prNumber,
+        body,
+    });
+}
+exports.storeDataInHiddenComment = storeDataInHiddenComment;
+/**
+ * Searches PR comments to find a matching hidden comment with
+ * your specified key, e.g. 'slack-thread-id'. If found, returns
+ * the stored value.
+ */
+async function findDataInHiddenComments(prNumber, dataKey) {
+    const ghClient = github.getOctokit(core.getInput('github-token'));
+    const { owner, repo } = github.context.repo;
+    const { data: comments } = await ghClient.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: prNumber,
+        per_page: 100,
+    });
+    const marker = `<!-- store-data: key=${dataKey}, value=`;
+    for (const comment of comments) {
+        const body = comment.body || '';
+        if (body.includes(marker)) {
+            // Match the entire line: <!-- store-data: key=DATA_KEY, value=VALUE -->
+            const regex = new RegExp(`<!-- store-data: key=${dataKey}, value=(.+) -->`);
+            const match = body.match(regex);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+    }
+    return undefined;
+}
+exports.findDataInHiddenComments = findDataInHiddenComments;
 
 
 /***/ }),
@@ -18797,15 +18906,37 @@ exports.getFeatureFlagIdsFromPrIfExists = exports.handleReleaseNotes = void 0;
 const asana_1 = __nccwpck_require__(1240);
 const slack_1 = __nccwpck_require__(9342);
 const github_1 = __nccwpck_require__(4974);
+const github_2 = __nccwpck_require__(4974);
 const handleReleaseNotes = async (descriptionAndPrNumberArray, slackBotToken, slackBotChannelId, isMergeNotes) => {
     try {
+        // 1) Build the Slack blocks (instead of simple text)
         const blocks = await getReleaseNotesFromDescriptions(descriptionAndPrNumberArray, isMergeNotes);
-        if (slackBotToken && slackBotChannelId) {
-            await (0, slack_1.sendSlackMessage)(blocks, slackBotToken, slackBotChannelId);
+        // 2) If Slack token/channel not configured, bail
+        if (!slackBotToken || !slackBotChannelId) {
+            return;
+        }
+        // 3) Identify the PR number from context
+        const prNumber = (0, github_2.getPrNumber)();
+        if (!prNumber) {
+            console.log('No PR number found in context');
+            return;
+        }
+        // 4) See if we already have a Slack thread for this PR
+        const existingThreadTs = await (0, github_2.findDataInHiddenComments)(prNumber, 'slack-thread-id');
+        // 5) Send Slack message using the blocks. If `existingThreadTs` is present,
+        //    Slack will treat this as a reply in that thread (aka "threaded reply").
+        const newThreadTs = await (0, slack_1.sendSlackMessage)(blocks, // Pass blocks instead of plain text
+        slackBotToken, slackBotChannelId, existingThreadTs // <= thread_ts param
+        );
+        // 6) If we had no existing thread, but Slack gave us a new one, store it
+        //    so future runs can reply in the same thread.
+        if (!existingThreadTs && newThreadTs) {
+            await (0, github_2.storeDataInHiddenComment)(prNumber, 'slack-thread-id', newThreadTs);
         }
     }
     catch (e) {
-        console.log('Failed to send release notes on pr to prod');
+        console.log('Failed to send release notes on PR to prod');
+        console.error(e);
     }
 };
 exports.handleReleaseNotes = handleReleaseNotes;
@@ -18828,77 +18959,80 @@ function getFeatureFlagIdsFromPrIfExists(prDescription) {
     return Array.from(featureFlags);
 }
 exports.getFeatureFlagIdsFromPrIfExists = getFeatureFlagIdsFromPrIfExists;
-// create a slack blocks with attachments and fields
-const buildSlackBlocks = (repo, prLink, env, taskDetails, isMergeNotes) => {
+// Reuse your original buildSlackBlocks function (unchanged):
+const buildSlackBlocks = (repoName, prLink, env, taskDetails, isMergeNotes) => {
     return [
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `A new release is being *${isMergeNotes ? 'deployed 🚀' : 'cooked 👩‍🍳'}*`
-            }
+                text: `A new release is being *${isMergeNotes ? 'deployed 🚀' : 'cooked 👩‍🍳'}*`,
+            },
         },
         {
             type: 'section',
             fields: [
                 {
                     type: 'mrkdwn',
-                    text: `*Repository:* ${repo}`
+                    text: `*Repository:* ${repoName}`,
                 },
                 {
                     type: 'mrkdwn',
-                    text: `*PR:* ${prLink}`
+                    text: `*PR:* ${prLink}`,
                 },
                 {
                     type: 'mrkdwn',
-                    text: `*Env:* ${env}`
-                }
-            ]
+                    text: `*Env:* ${env}`,
+                },
+            ],
         },
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: taskDetails ? `Asana tickets included:\n${taskDetails}` : 'no asana tickets :tada:'
-            }
+                text: taskDetails
+                    ? `Asana tickets included:\n${taskDetails}`
+                    : 'no asana tickets :tada:',
+            },
         },
         {
-            "type": "divider"
+            type: 'divider',
         },
         {
-            "type": "context",
-            "elements": [
+            type: 'context',
+            elements: [
                 {
-                    "type": "mrkdwn",
-                    "text": "notify <!subteam^S05SL1L1XE2>"
-                }
-            ]
-        }
+                    type: 'mrkdwn',
+                    text: 'notify <!subteam^S05SL1L1XE2>',
+                },
+            ],
+        },
     ];
 };
+/**
+ * Gathers Asana tasks from all child PR descriptions, then assembles them
+ * into Slack blocks (clickable links, etc.).
+ */
 const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMergeNotes) => {
     let taskDetailsFromAllDescriptions = [];
     console.log('descriptionAndPrNumberArray', descriptionAndPrNumberArray);
+    // Process each PR's description
     await Promise.all(descriptionAndPrNumberArray.map(async ({ description }) => {
         try {
             const { taskUrls, taskTitleAndAssigneeArray } = await (0, asana_1.getTaskDetailsFromPr)(description);
             const featureFlagsArr = getFeatureFlagIdsFromPrIfExists(description);
-            // Map titles and URLs into a structured format
             const taskDetails = taskUrls.map((url, index) => ({
                 title: taskTitleAndAssigneeArray[index]?.title,
                 url,
                 featureFlagsArr,
             }));
-            taskDetailsFromAllDescriptions = [
-                ...taskDetailsFromAllDescriptions,
-                ...taskDetails,
-            ];
+            taskDetailsFromAllDescriptions.push(...taskDetails);
         }
         catch (error) {
             console.error('Failed to process description:', description, error);
         }
     }));
-    // Format task details for Slack (clickable titles with URLs)
+    // Format tasks with Slack-friendly bullets & clickable titles
     let formattedTaskDetails = taskDetailsFromAllDescriptions
         .map(({ title, url, featureFlagsArr }) => `• <${url}|${title}>${featureFlagsArr?.length
         ? ` with flags: ${featureFlagsArr.join(', ')}`
@@ -18908,7 +19042,8 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
         formattedTaskDetails =
             'No Asana tickets were found in the provided descriptions.';
     }
-    return buildSlackBlocks(github_1.repo, github_1.prLink, github_1.targetBranch, formattedTaskDetails, isMergeNotes);
+    const prLink = (0, github_1.getPrLink)();
+    return buildSlackBlocks(github_1.repo, prLink, github_1.targetBranch, formattedTaskDetails, isMergeNotes);
 };
 
 
@@ -18922,13 +19057,30 @@ const getReleaseNotesFromDescriptions = async (descriptionAndPrNumberArray, isMe
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sendSlackMessage = void 0;
 const web_api_1 = __nccwpck_require__(431);
-const sendSlackMessage = async (blocks, slackBotToken, slackChannelId) => {
-    const client = new web_api_1.WebClient(slackBotToken);
-    return client.chat.postMessage({
-        channel: slackChannelId,
-        blocks,
-    });
-};
+/**
+ * Sends a Slack message to the specified channel with the given Block Kit layout.
+ * If `threadTs` is provided, the message will be posted as a reply in that thread.
+ * Returns the Slack "ts" of the posted message.
+ */
+async function sendSlackMessage(blocks, token, channel, threadTs) {
+    const client = new web_api_1.WebClient(token);
+    try {
+        // Slack requires a fallback "text" field; even though we primarily use blocks.
+        const result = await client.chat.postMessage({
+            channel,
+            blocks,
+            text: '',
+            thread_ts: threadTs,
+        });
+        // Slack returns `result.ts` which is either the new message's TS
+        // or the same thread_ts if replying in an existing thread.
+        return result.ts;
+    }
+    catch (error) {
+        console.error('Error posting Slack message:', error);
+        return undefined;
+    }
+}
 exports.sendSlackMessage = sendSlackMessage;
 
 
