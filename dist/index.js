@@ -18686,7 +18686,7 @@ function getPrLink() {
     const prNum = getPrNumber();
     const owner = github.context.repo.owner;
     const repo = github.context.repo.repo;
-    return `<http://github.com/${owner}/${repo}/pull/${prNum}|PR #${prNum}>`;
+    return `<http://github.com/${owner}/${repo}/pull/${prNum}|#${prNum}>`;
 }
 exports.getPrLink = getPrLink;
 /**
