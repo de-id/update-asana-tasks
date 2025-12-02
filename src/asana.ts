@@ -32,7 +32,11 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
     taskIds: string[];
     taskUrls: string[];
 } {
-    const asanaUrlRegex = /https:\/\/app\.asana\.com\/0\/\d+\/\d+/g;
+    // Support both Asana URL formats:
+    // Format 1: https://app.asana.com/0/XXXXX/YYYYY (where YYYYY is the task ID)
+    // Format 2: https://app.asana.com/1/XXXXX/project/YYYYY/task/ZZZZZ (where ZZZZZ is the task ID)
+    const asanaUrlRegex =
+        /https:\/\/app\.asana\.com\/(?:0\/\d+\/\d+|1\/\d+\/project\/\d+\/task\/\d+)/g;
 
     const taskUrls = [...prDescription.matchAll(asanaUrlRegex)].map(
         match => match[0]
@@ -44,6 +48,12 @@ export function getTaskIdsAndUrlsFromPr(prDescription: string): {
     }
 
     const taskIds = taskUrls.map(taskUrl => {
+        // Try format 2 first: /task/ZZZZZ
+        const taskFormat2Match = taskUrl.match(/\/task\/(\d+)/);
+        if (taskFormat2Match) {
+            return taskFormat2Match[1];
+        }
+        // Fallback to format 1: /0/XXXXX/YYYYY (extract YYYYY)
         const taskGidMatch = taskUrl.match(/\/(\d+)$/);
         return taskGidMatch ? taskGidMatch[1] : 'not-found';
     });
