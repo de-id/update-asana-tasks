@@ -18567,21 +18567,29 @@ async function getTaskDetailsFromPr(prDescription) {
     const asanaPat = core.getInput('asana-pat');
     const taskTitleAndAssigneeArray = await Promise.all(taskIds.map(async (taskGid) => {
         try {
-            const response = await axios_1.default.get(`${asanaBaseUrl}${taskGid}`, {
+            const apiUrl = `${asanaBaseUrl}${taskGid}`;
+            console.log(`Fetching task details for ID ${taskGid} from ${apiUrl}`);
+            const response = await axios_1.default.get(apiUrl, {
                 headers: {
                     Authorization: `Bearer ${asanaPat}`,
                 },
             });
+            console.log(`Response for task ${taskGid}:`, JSON.stringify(response.data, null, 2));
+            const title = response.data?.data?.name;
+            const assignee = response.data?.data?.assignee;
+            if (!title) {
+                console.warn(`Task ${taskGid} response structure:`, JSON.stringify(response.data, null, 2));
+            }
             return {
-                title: response.data?.data?.name || 'Unknown Task Title',
-                assignee: response.data?.data?.assignee || 'Unassgined',
+                title: title || 'Unknown Task Title',
+                assignee: assignee || 'Unassigned',
             };
         }
         catch (error) {
-            console.error(`Failed to fetch title for task ID ${taskGid}:`, error?.message);
+            console.error(`Failed to fetch title for task ID ${taskGid}:`, error?.message, error?.response?.status, error?.response?.data);
             return {
                 title: 'Unknown Task Title',
-                assignee: 'Unassgined',
+                assignee: 'Unassigned',
             };
         }
     }));
