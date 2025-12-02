@@ -28,14 +28,14 @@ required: false
 should-update-tasks-status:
 required: false
 
-| Name                         | Description                                                    | Is Required | Default |
-| ---------------------------- | -------------------------------------------------------------- | ----------- | ------- |
-| `is-review`                  | Is the action used for new PR (Task will move to "In Review")  | No          | false   |
-| `asana-pat`                  | Asana PAT (Stored in our secrets, can be generated from Asana) | Yes         | -       |
-| `github-token`               | -> secrets.GITHUB_TOKEN                                        | Yes         | -       |
-| `slack-bot-token`            | token to send slack messages                                   | No          | -       |
-| `slack-bot-channel-id`       | channel for slack messages                                     | No          | -       |
-| `should-update-tasks-status` | channel for slack messages                                     | No          | true    |
+| Name                         | Description                                                                                     | Is Required | Default |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- | ----------- | ------- |
+| `is-review`                  | Is the action used for new PR (Task will move to "In Review")                                   | No          | false   |
+| `asana-pat`                  | Asana PAT (Stored in our secrets, can be generated from Asana)                                  | Yes         | -       |
+| `github-token`               | -> secrets.GITHUB_TOKEN                                                                         | Yes         | -       |
+| `slack-bot-token`            | token to send slack messages                                                                    | No          | -       |
+| `slack-bot-channel-id`       | channel for slack messages                                                                      | No          | -       |
+| `should-update-tasks-status` | Whether to update Asana task QA status fields (false = only send Slack notes, no status update) | No          | true    |
 
 ### Outputs
 

@@ -2,15 +2,24 @@ name: 'Update Asana Tasks'
 description: 'Manage versions via git tags'
 inputs:
   is-review:
-    default: false
+    description: 'Whether this is a review PR (sets status to Review vs Staging)'
+    default: 'false'
   asana-pat:
+    description: 'Asana Personal Access Token'
     required: true
   github-token:
+    description: 'GitHub token for API access'
     required: true
   slack-bot-token:
+    description: 'Slack bot token for sending messages'
     required: false
   slack-bot-channel-id:
+    description: 'Slack channel ID for deployment notifications'
     required: false
+  should-update-tasks-status:
+    description: 'Whether to update Asana task QA status fields (false = only send Slack notes, no status update)'
+    required: false
+    default: 'true'
 runs:
   using: 'node20'
   main: 'dist/index.js'
